@@ -354,8 +354,8 @@ const GUN_SPECS = {
     'TRAPER': {
         bulletSpeed: 0,
         length: 50,
-        fireRate: 10,
-        damage: 2, // 높음
+        fireRate: 1,
+        damage: 0.5, // 높음
         type: 'traper',
         name_kr: '지뢰포',
         desc_kr: '고정된 지뢰를 설치합니다.',
@@ -367,7 +367,7 @@ const GUN_SPECS = {
         damage: 10, // 높음
         type: 'knife',
         name_kr: '칼',
-        desc_kr: '총이 아니어서 체력이 20입니다.',
+        desc_kr: '고수 전용',
     }
 };
 // --- 타워 게임 변수 ---
