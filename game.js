@@ -354,8 +354,8 @@ const GUN_SPECS = {
     'TRAPER': {
         bulletSpeed: 0,
         length: 50,
-        fireRate: 1,
-        damage: 1, // 높음
+        fireRate: 10,
+        damage: 2, // 높음
         type: 'traper',
         name_kr: '지뢰포',
         desc_kr: '고정된 지뢰를 설치합니다.',
