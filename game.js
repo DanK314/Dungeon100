@@ -364,7 +364,7 @@ const GUN_SPECS = {
         bulletSpeed: 0,
         length: 50,
         fireRate: 1, // 0.001초 (레이저)
-        damage: 3, // 높음
+        damage: 10, // 높음
         type: 'knife',
         name_kr: '칼',
         desc_kr: '총이 아니어서 체력이 20입니다.',
