@@ -349,13 +349,13 @@ const GUN_SPECS = {
         damage: 2, // 낮음
         type: 'railgun',
         name_kr: '레일건',
-        desc_kr: '초당 150데미지를 입히고 적을 관통하는 레이저를 쏩니다.',
+        desc_kr: '적을 관통하는 레이저를 쏩니다.',
     },
     'TRAPER': {
         bulletSpeed: 0,
         length: 50,
         fireRate: 50,
-        damage: 1, // 높음
+        damage: 10, // 높음
         type: 'traper',
         name_kr: '지뢰포',
         desc_kr: '고정된 지뢰를 설치합니다.',
