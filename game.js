@@ -346,7 +346,7 @@ const GUN_SPECS = {
         bulletSpeed: 5,
         length: 10,
         fireRate: 1, // 0.001초 (레이저)
-        damage: 0.5, // 낮음
+        damage: 2, // 낮음
         type: 'railgun',
         name_kr: '레일건',
         desc_kr: '초당 150데미지를 입히고 적을 관통하는 레이저를 쏩니다.',
