@@ -319,7 +319,7 @@ const GUN_SPECS = {
         bulletSpeed: 18,
         length: 60,
         fireRate: 500, // 0.5초 (빠름)
-        damage: 10, // 보통
+        damage: 15, // 보통
         type: 'revolver',
         name_kr: '권총',
         desc_kr: '데미지와 연사 속도가 그럭저럭 균형잡힌 총입니다.',
@@ -328,7 +328,7 @@ const GUN_SPECS = {
         bulletSpeed: 30,
         length: 150,
         fireRate: 2000, // 3초 (매우 느림)
-        damage: 50, // 매우 높음
+        damage: 100, // 매우 높음
         type: 'revolver',
         name_kr: '저격소총',
         desc_kr: '높은 데미지를 자랑하지만, 재장전 시간이 매우 깁니다.',
@@ -346,7 +346,7 @@ const GUN_SPECS = {
         bulletSpeed: 5,
         length: 10,
         fireRate: 1, // 0.001초 (레이저)
-        damage: 2, // 낮음
+        damage: 1, // 낮음
         type: 'railgun',
         name_kr: '레일건',
         desc_kr: '적을 관통하는 레이저를 쏩니다.',
