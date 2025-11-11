@@ -617,8 +617,8 @@ function gameLoop() {
 
     // 🛑 5. 순차적인 적 스폰 로직
     if (totalEnemiesToSpawn > 0 && Date.now() - lastSpawnTime >= SPAWN_INTERVAL) {
-        const enemyHp = ENEMY_BASE_HP + (currentFloor - 1) * 5;
-        const enemySpeed = ENEMY_BASE_SPEED + (currentFloor - 1) * 0.1;
+        const enemyHp = ENEMY_BASE_HP + (currentFloor - 1) * 2;
+        const enemySpeed = ENEMY_BASE_SPEED + (currentFloor - 1) * 0.05;
         // 오른쪽 벽 근처 (SW - 90)에서 스폰
         enemies.push(new Enemy(SW - 90, 100, 50, 50, enemySpeed, enemyHp));
         totalEnemiesToSpawn--;
