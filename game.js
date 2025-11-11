@@ -388,7 +388,7 @@ function selectGun(gunType) {
     // Gun 객체 생성
     const newGun = new Gun(spec.bulletSpeed, spec.length, spec.fireRate, spec.damage, spec.type);
     // Player 객체 생성 (초기 위치: 50, 100)
-    player = new Player(50, 100, 40, 40, 5, newGun);
+    player = new Player(50, 100, 40, 40, newGun.type === 'knife' ? 7 : 5, newGun);
     // 게임 상태 변경
     gameState = 'playing';
     // 게임 시작 시 적 스폰 설정
