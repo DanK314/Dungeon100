@@ -225,9 +225,9 @@ class Enemy extends BoxCollider {
         const player_center_x = player.x + player.w / 2;
         this.hp -= damage;
         if (center_x < player_center_x) {
-            this.x += -damage * 0.3;
+            this.x += -damage * 0.2;
         } else if (center_x > player_center_x) {
-            this.x += damage * 0.3;
+            this.x += damage * 0.2;
         }
         if (this.hp <= 0) {
             this.dead = true;
