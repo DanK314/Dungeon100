@@ -85,6 +85,10 @@ class Player extends BoxCollider {
             this.gun.damage += 10;
             console.log("Special Ability Used: 1 sec Invulnerability!");
             return true;
+        }else if(now - this.lastSpecialAbilityTime >= this.specialAbilityCooldown){
+            this.hp += 15;
+            this.hp = this.hp > 100 ? 100 : this.hp;
+            this.lastSpecialAbilityTime = now;
         }
         return false;
     }
@@ -220,9 +224,9 @@ class Enemy extends BoxCollider {
         const player_center_x = player.x + player.w / 2;
         this.hp -= damage;
         if (center_x < player_center_x) {
-            this.x += -damage * 0.1;
+            this.x += -damage * 0.5;
         } else if (center_x > player_center_x) {
-            this.x += damage * 0.1;
+            this.x += damage * 0.5;
         }
         if (this.hp <= 0) {
             this.dead = true;
