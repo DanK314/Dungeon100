@@ -343,9 +343,9 @@ const GUN_SPECS = {
         desc_kr: '근거리에서 강력한 산탄을 발사합니다. (5발 스프레드)',
     },
     'RAILGUN': {
-        bulletSpeed: 15,
+        bulletSpeed: 5,
         length: 20,
-        fireRate: 1, // 0.001초 (레이저)
+        fireRate: 10, // 0.001초 (레이저)
         damage: 0.5, // 낮음
         type: 'railgun',
         name_kr: '레일건',
