@@ -89,6 +89,7 @@ class Player extends BoxCollider {
             this.hp += 15;
             this.hp = this.hp > 100 ? 100 : this.hp;
             this.lastSpecialAbilityTime = now;
+            return true;
         }
         return false;
     }
@@ -680,11 +681,9 @@ function gameLoop() {
     ctx.fillText(`Floor: ${currentFloor} / ${MAX_FLOOR}`, 50, 30);
     // 🛑 쿨타임 정보 표시 로직
     const remainingCooldown = Math.max(0, player.specialAbilityCooldown - (Date.now() - player.lastSpecialAbilityTime));
-    const cooldownText = remainingCooldown > 0 ? `쿨타임: ${(remainingCooldown / 1000).toFixed(1)}s` : (player.isSpecialInvulnerable ? `무적 (1.0s)` : `무적 스킬: 준비 완료(우클릭으로 사용)`);
+    const cooldownText = remainingCooldown > 0 ? `쿨타임: ${(remainingCooldown / 1000).toFixed(1)}s` : (player.isSpecialInvulnerable ? `무적 (1.0s)` : `스킬: 준비 완료(우클릭으로 사용)`);
     ctx.fillStyle = remainingCooldown > 0 ? "red" : "lime";
-    if (player.gun.type === 'knife') {
-        ctx.fillText(cooldownText, SW - 500, 30);
-    }
+    ctx.fillText(cooldownText, SW - 500, 30);
     player.draw(mouseX, mouseY);
     enemies.forEach((e) => e.draw());
     bullets.forEach((b) => b.draw());
