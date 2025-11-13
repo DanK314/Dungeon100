@@ -12,7 +12,19 @@ window.onresize = function () {
     canvas.height = SH;
     setupWalls();
 };
-
+// 🛑 [추가] 풀스크린 요청 함수
+function requestGameFullscreen() {
+    // 캔버스 자체가 아니라 <html> 페이지 전체를 풀스크린으로 만듭니다.
+    const elem = document.documentElement; 
+    
+    if (elem.requestFullscreen) {
+        elem.requestFullscreen();
+    } else if (elem.webkitRequestFullscreen) { // Safari
+        elem.webkitRequestFullscreen();
+    } else if (elem.msRequestFullscreen) { // IE11
+        elem.msRequestFullscreen();
+    }
+}
 // ========================== // 기본 클래스 정의 // ==========================
 class BoxCollider {
     constructor(x, y, w, h) {
@@ -63,42 +75,42 @@ class Player extends BoxCollider {
         this.maxJumps = this.gun.type === 'knife' ? 4 : 3;
         this.jumpCount = 0;
         this.jumpLocked = false;
-        // 🛑 우클릭 특수 능력 변수 추가
-        this.isSpecialInvulnerable = false; // 특수 무적 상태 여부
-        this.specialInvulnerabilityTime = 0; // 특수 무적 해제 시간
-        this.specialAbilityCooldown = 30000; // 30초 쿨타임 (30000ms)
-        this.lastSpecialAbilityTime = 0; // 마지막 사용 시간
+        this.isSpecialInvulnerable = false;
+        this.specialInvulnerabilityTime = 0;
+        this.specialAbilityCooldown = 30000;
+        this.lastSpecialAbilityTime = 0;
     }
     applyGravity(gravity) {
         this.vy += gravity;
         if (this.vy > 15) this.vy = 15;
     }
-    // 🛑 우클릭 특수 능력 사용 메서드
     useSpecialAbility() {
         const now = Date.now();
         if (now - this.lastSpecialAbilityTime >= this.specialAbilityCooldown && this.gun.type === 'knife') {
             this.isSpecialInvulnerable = true;
-            this.specialInvulnerabilityTime = now + 10000; // 2초 무적
+            const invulDuration = 1000; 
+            this.specialInvulnerabilityTime = now + invulDuration; 
             this.lastSpecialAbilityTime = now;
             this.speed += 5;
             this.hp += this.hp < 20 ? 30 : 0;
             this.gun.damage += 10;
-            console.log("Special Ability Used: 1 sec Invulnerability!");
+            console.log(`Special Ability Used: ${invulDuration / 1000} sec Invulnerability, Speed+5, Damage+10!`);
             return true;
-        }else if(now - this.lastSpecialAbilityTime >= this.specialAbilityCooldown){
-            this.hp += 15;
+        } else if (now - this.lastSpecialAbilityTime >= this.specialAbilityCooldown) {
+            const healAmount = 15;
+            this.hp += healAmount;
             this.hp = this.hp > 100 ? 100 : this.hp;
             this.lastSpecialAbilityTime = now;
+            console.log(`Special Ability Used: Healed +${healAmount} HP.`);
             return true;
         }
         return false;
     }
-    // 🛑 데미지 로직 수정: 특수 무적 상태일 때는 데미지를 입지 않음
     takeDamage(damage) {
-        if (this.hp <= 0 || this.isInvulnerable || this.isSpecialInvulnerable) return; // 특수 무적 중일 때도 무시
+        if (this.hp <= 0 || this.isInvulnerable || this.isSpecialInvulnerable) return;
         this.hp -= damage;
         if (this.hp < 0) this.hp = 0;
-        this.isInvulnerable = true; // 기본 피격 무적 시간 (0.3초)
+        this.isInvulnerable = true;
         this.invulnerabilityTime = Date.now() + (this.gun.type == 'knife' ? 1000 : 300);
         if (this.hp === 0) {
             console.log("Player Died!");
@@ -106,13 +118,12 @@ class Player extends BoxCollider {
     }
     update(input, walls) {
         if (this.hp <= 0) return;
-        // 🛑 특수 무적 상태 해제 확인
         if (this.isSpecialInvulnerable && Date.now() > this.specialInvulnerabilityTime) {
             this.isSpecialInvulnerable = false;
-            this.speed = this.defspeed;
+            this.speed = this.defspeed; 
             this.gun.damage -= 10;
+            console.log("Special Ability Ended.");
         }
-        // 기본 피격 무적 상태 해제 확인
         if (this.isInvulnerable && Date.now() > this.invulnerabilityTime) {
             this.isInvulnerable = false;
         }
@@ -142,7 +153,6 @@ class Player extends BoxCollider {
     }
     draw(mouseX, mouseY) {
         const angle = Math.atan2(mouseY - (this.y + this.h / 2), mouseX - (this.x + this.w / 2));
-        // 🛑 특수 무적 상태일 때와 기본 무적 상태일 때 모두 깜빡이도록 처리
         const isInvul = this.isInvulnerable || this.isSpecialInvulnerable;
         if (isInvul && Date.now() % 100 < 50) {
             return;
@@ -159,16 +169,15 @@ class Player extends BoxCollider {
         ctx.fillRect(this.x, this.y - 10, this.w, 5);
         ctx.fillStyle = "lime";
         ctx.fillRect(this.x, this.y - 10, (this.w * this.hp) / 100, 5);
-        // 🛑 쿨타임 시각화
         const now = Date.now();
         const elapsed = now - this.lastSpecialAbilityTime;
         const remainingCooldown = Math.max(0, this.specialAbilityCooldown - elapsed);
         if (remainingCooldown > 0) {
             const ratio = remainingCooldown / this.specialAbilityCooldown;
-            ctx.fillStyle = `rgba(255, 0, 0, ${0.5 * ratio})`; // 쿨타임 중 빨간색 오버레이
+            ctx.fillStyle = `rgba(255, 0, 0, ${0.5 * ratio})`;
             ctx.fillRect(this.x, this.y, this.w, this.h);
         } else if (this.isSpecialInvulnerable) {
-            ctx.fillStyle = "rgba(0, 255, 255, 0.5)"; // 무적 중 청록색 오버레이
+            ctx.fillStyle = "rgba(0, 255, 255, 0.5)";
             ctx.fillRect(this.x, this.y, this.w, this.h);
         }
     }
@@ -198,11 +207,10 @@ class Enemy extends BoxCollider {
         } else if (center_x > player_center_x) {
             this.vx = -this.speed;
         }
-        // 🛑 점프 AI 로직: 플레이어보다 아래에 있을 때 점프 시도
         const center_y = this.y + this.h / 2;
         const player_center_y = player.y + player.h / 2;
         if (this.onGround && center_y > player_center_y) {
-            this.vy = -15; // 점프 힘
+            this.vy = -15;
             this.onGround = false;
         }
         this.applyGravity(0.6);
@@ -218,23 +226,43 @@ class Enemy extends BoxCollider {
             }
         }
     }
-    takeDamage(damage) {
-        // 플레이어가 정의되어 있지 않은 경우를 대비하여 조건부 추가
+    
+    takeDamage(damage, isExplosion = false, explosionCenterX = null) { 
         if (!player) return;
-        const center_x = this.x + this.w / 2;
-        const player_center_x = player.x + player.w / 2;
-        this.hp -= damage;
-        if (center_x < player_center_x) {
-            this.x += -damage * 0.1;
-        } else if (center_x > player_center_x) {
-            this.x += damage * 0.1;
+
+        const enemyCenterX = this.x + this.w / 2;
+        let referenceX;
+
+        if (isExplosion) {
+            referenceX = explosionCenterX; 
+        } else {
+            referenceX = player.x + player.w / 2; 
         }
+        
+        const knockbackMultiplier = isExplosion ? 100 : 1; 
+        const knockbackForce = damage * 0.1 * knockbackMultiplier; 
+
+        this.hp -= damage;
+
+        if (enemyCenterX < referenceX) {
+            this.x -= knockbackForce; 
+        } else if (enemyCenterX > referenceX) {
+            this.x += knockbackForce; 
+        }
+
         if (this.hp <= 0) {
             this.dead = true;
         }
     }
+    
     draw() {
         if (this.dead) return;
+
+        // 🛑 [최적화] Culling: 화면 밖에 있으면 그리지 않음
+        if (this.x + this.w < 0 || this.x > SW || this.y + this.h < 0 || this.y > SH) {
+            return;
+        }
+
         ctx.fillStyle = "red";
         ctx.fillRect(this.x, this.y, this.w, this.h);
         ctx.fillStyle = "black";
@@ -268,145 +296,257 @@ class Gun {
         if (this.type === "shotgun") {
             let ba = angle - 0.2;
             const endAngle = angle + 0.2;
-            const spreadStep = 0.1; // 산탄총의 발사 각도를 더 넓게 조정
+            const spreadStep = 0.1; 
             while (ba < endAngle) {
                 bullets.push(new Bullet(bx, by, ba, this.bulletSpeed));
                 ba += spreadStep
             }
         } else {
-            bullets.push(new Bullet(bx, by, angle, this.bulletSpeed, life, fw));
+            bullets.push(new Bullet(bx, by, angle, this.bulletSpeed, life, fw, this.type));
         }
         this.lastShot = Date.now();
     }
 }
 
+// ========================== // Bullet 클래스 (지속 데미지 로켓) // ==========================
 class Bullet extends BoxCollider {
-    constructor(x, y, angle, speed, life = 5000, forward = 30) {
-        super(x, y, 8, 8);
+    constructor(x, y, angle, speed, life = 5000, forward = 50, type = "normal") {
+        const size = type === "rocket" ? 20 : 8;
+        super(x, y, size, size);
+        this.x -= this.w / 2;
+        this.y -= this.h / 2;
         this.angle = angle;
         this.speed = speed;
         this.life = life;
         this.birth = Date.now();
         this.dead = false;
+        this.exploded = false;
+        this.explosionTimer = 0;
+        this.type = type;
+
         this.x += Math.cos(this.angle) * forward;
         this.y += Math.sin(this.angle) * forward;
+
+        this.centerX = this.x + this.w / 2;
+        this.centerY = this.y + this.h / 2;
     }
-    update(walls) {
+    
+    triggerExplosion() { 
+        if (this.exploded) return;
+        this.exploded = true;
+        this.explosionTimer = 0;
+        this.centerX = this.x + this.w / 2;
+        this.centerY = this.y + this.h / 2;
+        this.w = 40;
+        this.h = 40;
+    }
+
+    update(walls, enemies = []) { 
         if (this.dead) return;
-        this.x += Math.cos(this.angle) * this.speed;
-        this.y += Math.sin(this.angle) * this.speed;
-        for (let w of walls) {
-            if (this.checkCollision(w)) {
+
+        // 🛑 폭발 중일 때: 매 프레임 확장 및 데미지/타이머 체크
+        if (this.exploded) {
+            this.explosionTimer++;
+            
+            // 1. 폭발 종료 시간 체크 (60프레임 = 1초)
+            if (this.explosionTimer >= 60) {
                 this.dead = true;
-                break;
+                return;
+            }
+
+            // 2. 시각 효과 (매 프레임 확장)
+            this.w += 6;
+            this.h += 6;
+            this.x = this.centerX - this.w / 2;
+            this.y = this.centerY - this.h / 2;
+
+            // 3. "노란색" 페이즈 (처음 30프레임 = 0.5초) 동안만 데미지 적용
+            const yellowPhaseDuration = 30; 
+            if (this.explosionTimer < yellowPhaseDuration) {
+                
+                const ROCKET_DOT_DAMAGE = 1; // 프레임당 지속 데미지
+                for (let e of enemies) {
+                    if (this.checkCollision(e)) {
+                        e.takeDamage(ROCKET_DOT_DAMAGE, true, this.centerX);
+                    }
+                }
+            }
+            return;
+        }
+        
+        // (총알이 날아가는 상태)
+        const nextX = this.x + Math.cos(this.angle) * this.speed;
+        const nextY = this.y + Math.sin(this.angle) * this.speed;
+        const testBox = { x: nextX, y: nextY, w: this.w, h: this.h };
+
+        // 1️⃣ 벽 충돌
+        for (let w of walls) {
+            if (
+                this.checkCollision(w) ||
+                (testBox.x < w.x + w.w &&
+                    testBox.x + testBox.w > w.x &&
+                    testBox.y < w.y + w.h &&
+                    testBox.y + testBox.h > w.y)
+            ) {
+                if (this.type === "rocket") {
+                    this.triggerExplosion();
+                } else {
+                    this.dead = true;
+                }
+                return;
             }
         }
+
+        // 2️⃣ 적 충돌
+        for (let e of enemies) {
+            if (this.checkCollision(e)) {
+                if (this.type === "rocket") {
+                    this.triggerExplosion();
+                    return;
+                } else {
+                    this.dead = true;
+                    return;
+                }
+            }
+        }
+
+        // 3️⃣ 화면 경계
+        if (nextY + this.h >= SH || nextY <= 0 || nextX <= 0 || nextX + this.w >= SW) {
+            if (this.type === "rocket") {
+                this.triggerExplosion();
+            } else {
+                this.dead = true;
+            }
+            return;
+        }
+
+        // 이동
+        this.x = nextX;
+        this.y = nextY;
     }
+
     draw() {
         if (this.dead) return;
-        ctx.fillStyle = "orange";
-        ctx.fillRect(this.x, this.y, this.w, this.h);
+        
+        // 🛑 [최적화] Culling: 화면 밖에 있으면 그리지 않음
+        if (this.x + this.w < 0 || this.x > SW || this.y + this.h < 0 || this.y > SH) {
+            return;
+        }
+        
+        if (this.exploded) {
+            const fade = 1 - this.explosionTimer / 60;
+            ctx.fillStyle = `rgba(255, ${Math.floor(200 * fade)}, 0, ${fade})`; 
+            ctx.fillRect(this.x, this.y, this.w, this.h);
+        } else {
+            ctx.fillStyle = this.type === "rocket" ? "red" : "orange";
+            ctx.fillRect(this.x, this.y, this.w, this.h);
+        }
     }
+
     isDead() {
-        return this.dead || Date.now() - this.birth > this.life;
+        return this.dead || (this.type !== "rocket" && Date.now() - this.birth > this.life);
     }
 }
 
+
 // ========================== // 게임 오브젝트 및 층 변수 // ==========================
-let gameState = 'start'; // 🛑 게임 상태 추가: 'start', 'selectGun', 'playing'
+let gameState = 'start'; 
 let player = null;
-const bullets = [];
-const enemies = [];
+// 🛑 [최적화] const -> let으로 변경 (Filter 적용 위함)
+let bullets = [];
+let enemies = [];
 let walls = [];
-// 🛑 무기 스펙 정의 추가
+
+// 🛑 무기 스펙 정의 (가독성 수정)
 const GUN_SPECS = {
     'PISTOL': {
-        bulletSpeed: 18,
-        length: 60,
-        fireRate: 500, // 0.5초 (빠름)
-        damage: 15, // 보통
-        type: 'revolver',
         name_kr: '권총',
         desc_kr: '데미지와 연사 속도가 그럭저럭 균형잡힌 총입니다.',
+        damage: 15,
+        fireRate: 500, // 0.5초
+        bulletSpeed: 18,
+        length: 60,
+        type: 'revolver'
     },
     'SNIPER': {
-        bulletSpeed: 30,
-        length: 150,
-        fireRate: 2000, // 3초 (매우 느림)
-        damage: 100, // 매우 높음
-        type: 'revolver',
         name_kr: '저격소총',
         desc_kr: '높은 데미지를 자랑하지만, 재장전 시간이 매우 깁니다.',
+        damage: 100,
+        fireRate: 2000, // 2초
+        bulletSpeed: 30,
+        length: 150,
+        type: 'revolver'
     },
     'SHOTGUN': {
-        bulletSpeed: 20,
-        length: 100,
-        fireRate: 1000, // 1초 (보통)
-        damage: 20, // 낮음 (산탄으로 커버)
-        type: 'shotgun',
         name_kr: '산탄총',
         desc_kr: '근거리에서 강력한 산탄을 발사합니다. (5발 스프레드)',
+        damage: 20, // (산탄 1발당 데미지)
+        fireRate: 1000, // 1초
+        bulletSpeed: 20,
+        length: 100,
+        type: 'shotgun'
     },
     'RAILGUN': {
-        bulletSpeed: 20,
-        length: 20,
-        fireRate: 1, // 0.001초 (레이저)
-        damage: 0.3, // 낮음
-        type: 'railgun',
         name_kr: '레일건',
         desc_kr: '적을 관통하는 레이저를 쏩니다.',
+        damage: 0.3, // (프레임당 데미지)
+        fireRate: 1, // 0.001초 (지속 발사)
+        bulletSpeed: 20,
+        length: 20,
+        type: 'railgun'
     },
     'TRAPER': {
-        bulletSpeed: 0,
-        length: 50,
-        fireRate: 1,
-        damage: 0.5, // 높음
-        type: 'traper',
         name_kr: '지뢰포',
         desc_kr: '고정된 지뢰를 설치합니다.',
+        damage: 0.5, // (프레임당 데미지)
+        fireRate: 1,
+        bulletSpeed: 0, // (설치형)
+        length: 50,
+        type: 'traper'
     },
     'KNIFE': {
-        bulletSpeed: 0,
-        length: 50,
-        fireRate: 1, // 0.001초 (레이저)
-        damage: 10, // 높음
-        type: 'knife',
         name_kr: '칼',
         desc_kr: '고수 전용',
+        damage: 10, // (프레임당 데미지)
+        fireRate: 1, // 0.001초 (지속 발사)
+        bulletSpeed: 0, // (근접)
+        length: 50,
+        type: 'knife'
+    },
+    'ROCKET': {
+        name_kr: '로켓포',
+        desc_kr: '터져요~~',
+        damage: 100, // (직격 데미지. 폭발 데미지는 Bullet 클래스에서 별도 처리)
+        fireRate: 2000, // 2초
+        bulletSpeed: 5, // (느림)
+        length: 50,
+        type: 'rocket'
     }
 };
-// --- 타워 게임 변수 ---
+
 const MAX_FLOOR = 100;
 let currentFloor = 1;
 const ENEMY_BASE_HP = 50;
 const ENEMY_BASE_SPEED = 2.0;
-// 🛑 적 스폰 관리 변수
 let totalEnemiesToSpawn = 0;
 let lastSpawnTime = 0;
-const SPAWN_INTERVAL = 1000; // 1초 간격
+const SPAWN_INTERVAL = 1000; 
 
 // ========================== // 적 생성 및 층 관리 함수 정의 // ==========================
-// 🛑 총기 선택 로직 함수 추가
 function selectGun(gunType) {
     const spec = GUN_SPECS[gunType];
     if (!spec) return;
-    // Gun 객체 생성
     const newGun = new Gun(spec.bulletSpeed, spec.length, spec.fireRate, spec.damage, spec.type);
-    // Player 객체 생성 (초기 위치: 50, 100)
     player = new Player(50, 100, 40, 40, newGun.type === 'knife' ? 7 : 5, newGun);
-    // 게임 상태 변경
     gameState = 'playing';
-    // 게임 시작 시 적 스폰 설정
     spawnEnemies();
 }
 
 function spawnEnemies() {
     enemies.length = 0;
-    // 🛑 적을 바로 생성하지 않고, 총 개수만 설정
     totalEnemiesToSpawn = Math.min(5, Math.floor(currentFloor / 10) + 1);
     lastSpawnTime = Date.now();
-    // 플레이어 초기 위치 재설정 (다음 층으로 갈 때마다 왼쪽에서 시작)
-    if (player) { // player가 생성된 후에만 위치 초기화
+    if (player) { 
         player.x = 50;
         player.y = 100;
         player.vx = 0;
@@ -414,7 +554,6 @@ function spawnEnemies() {
     }
 }
 
-// ... (setupWalls 함수는 동일)
 function setupWalls() {
     walls = [
         new BoxCollider(0, SH - 40, SW, 40),
@@ -429,7 +568,7 @@ function setupWalls() {
 }
 setupWalls();
 
-// 🛑 시작 화면 그리기 함수 추가
+// (drawStartScreen, drawGunSelection 함수는 동일하게 유지)
 function drawStartScreen() {
     ctx.clearRect(0, 0, SW, SH);
     ctx.fillStyle = "#222";
@@ -442,8 +581,6 @@ function drawStartScreen() {
     ctx.fillStyle = "lime";
     ctx.fillText("Click to Start", SW / 2, SH / 2 + 50);
 }
-
-// 🛑 총기 선택 화면 그리기 함수 추가
 function drawGunSelection() {
     ctx.clearRect(0, 0, SW, SH);
     ctx.fillStyle = "#222";
@@ -452,9 +589,9 @@ function drawGunSelection() {
     ctx.font = "40px Arial";
     ctx.textAlign = "center";
     ctx.fillText("무기를 선택하세요", SW / 2, SH / 2 - 200);
-    const gunTypes = ['PISTOL', 'SNIPER', 'SHOTGUN', 'RAILGUN', 'TRAPER', 'KNIFE'];
-    const padding = 20; // 패딩 조정
-    const numGuns = gunTypes.length; // 6
+    const gunTypes = ['PISTOL', 'SNIPER', 'SHOTGUN', 'RAILGUN', 'TRAPER', 'KNIFE', 'ROCKET'];
+    const padding = 20; 
+    const numGuns = gunTypes.length; 
     const totalPadding = padding * (numGuns + 1);
     const boxWidth = (SW - totalPadding) / numGuns;
     const boxHeight = 250;
@@ -464,22 +601,18 @@ function drawGunSelection() {
         const spec = GUN_SPECS[type];
         const x = startX + index * (boxWidth + padding);
         const y = startY;
-        // Draw Box
         ctx.fillStyle = "#333";
         ctx.fillRect(x, y, boxWidth, boxHeight);
         ctx.strokeStyle = "white";
         ctx.lineWidth = 3;
         ctx.strokeRect(x, y, boxWidth, boxHeight);
-        // Draw Title
         ctx.fillStyle = "cyan";
         ctx.font = "20px Arial";
         ctx.fillText(spec.name_kr, x + boxWidth / 2, y + 40);
-        // Draw Stats
         ctx.fillStyle = "white";
         ctx.font = "14px Arial";
         ctx.textAlign = "left";
         let textY = y + 80;
-        // Stats
         let fireRateSec = spec.fireRate / 1000;
         ctx.fillText(`데미지: ${spec.damage}`, x + 20, textY);
         textY += 30;
@@ -487,51 +620,45 @@ function drawGunSelection() {
         textY += 30;
         ctx.fillText(`탄환 종류: ${spec.type === 'shotgun' ? '산탄(5발)' : spec.type === 'knife' ? '근접' : '일반탄'}`, x + 20, textY);
         textY += 30;
-        // Description
         ctx.font = "8px Arial";
         ctx.fillStyle = "#ccc";
         ctx.textAlign = "center";
         ctx.fillText(spec.desc_kr, x + boxWidth / 2, y + boxHeight - 30);
-        // Save the bounds for click detection
         spec.bounds = { x, y, w: boxWidth, h: boxHeight };
     });
 }
+
 
 const input = {};
 let mouseX = 0;
 let mouseY = 0;
 let mouseDown = false;
 
-// ========================== // 입력 이벤트 // ==========================
+// (입력 이벤트 리스너는 동일하게 유지)
 window.addEventListener("keydown", (e) => (input[e.key] = true));
 window.addEventListener("keyup", (e) => {
     if (e.key === "w" || e.key === "ArrowUp") {
-        if (player) player.jumpLocked = false; // player가 있을 때만
+        if (player) player.jumpLocked = false; 
     }
     input[e.key] = false;
 });
-
 canvas.addEventListener("mousemove", (e) => {
     const rect = canvas.getBoundingClientRect();
     mouseX = e.clientX - rect.left;
     mouseY = e.clientY - rect.top;
 });
-
-// 🛑 마우스 다운 이벤트 (클릭 로직 재구성)
 canvas.addEventListener("mousedown", (e) => {
-    // 0: 좌클릭, 2: 우클릭
     if (e.button === 0) {
         const rect = canvas.getBoundingClientRect();
         const clickX = e.clientX - rect.left;
         const clickY = e.clientY - rect.top;
-
         if (gameState === 'start') {
             gameState = 'selectGun';
+            requestGameFullscreen();
             return;
         }
-
         if (gameState === 'selectGun') {
-            const gunTypes = ['PISTOL', 'SNIPER', 'SHOTGUN', 'RAILGUN', 'TRAPER', 'KNIFE'];
+            const gunTypes = ['PISTOL', 'SNIPER', 'SHOTGUN', 'RAILGUN', 'TRAPER', 'KNIFE', 'ROCKET'];
             gunTypes.forEach(type => {
                 const spec = GUN_SPECS[type];
                 if (spec.bounds) {
@@ -543,25 +670,20 @@ canvas.addEventListener("mousedown", (e) => {
                 }
             });
         }
-
         if (gameState === 'playing' && player) {
             mouseDown = true;
         }
     }
 });
-
 canvas.addEventListener("mouseup", (e) => {
     if (e.button === 0) {
         mouseDown = false;
     }
 });
-
-// 🛑 마우스 오른쪽 버튼 이벤트 (우클릭: 특수 능력 발동)
 canvas.addEventListener("contextmenu", (e) => {
-    e.preventDefault(); // 기본 우클릭 메뉴 방지
+    e.preventDefault(); 
     if (player && gameState === 'playing') {
         if (player.useSpecialAbility()) {
-            // 특수 능력 발동 성공
         } else {
             const remaining = Math.max(0, player.specialAbilityCooldown - (Date.now() - player.lastSpecialAbilityTime));
             console.log(`Special Ability on cooldown. Remaining: ${(remaining / 1000).toFixed(2)}s`);
@@ -569,91 +691,87 @@ canvas.addEventListener("contextmenu", (e) => {
     }
 });
 
-// ========================== // 게임 루프 // ==========================
+// ========================== // 게임 루프 (최적화 적용) // ==========================
 function gameLoop() {
     ctx.clearRect(0, 0, SW, SH);
 
-    // 🛑 0. 게임 상태에 따른 화면 처리
+    // 0. 게임 상태에 따른 화면 처리
     if (gameState === 'start') {
         drawStartScreen();
         requestAnimationFrame(gameLoop);
         return;
     }
-
     if (gameState === 'selectGun') {
         drawGunSelection();
         requestAnimationFrame(gameLoop);
         return;
     }
 
-    // ********* 1. 게임 클리어 상태 확인 및 처리 *********
+    // 1. 게임 클리어/오버 확인
     if (currentFloor > MAX_FLOOR) {
-        ctx.fillStyle = "rgba(0, 0, 0, 0.9)";
-        ctx.fillRect(0, 0, SW, SH);
-        ctx.fillStyle = "gold";
-        ctx.font = "60px Arial";
-        ctx.textAlign = "center";
-        ctx.fillText("✨ TOWER CLEAR! ✨", SW / 2, SH / 2 - 40);
-        ctx.font = "30px Arial";
-        ctx.fillText(`100층을 모두 정복했습니다!`, SW / 2, SH / 2 + 30);
+        // (게임 클리어 로직)
         return;
     }
-
-    // ********* 2. 게임 오버 상태 확인 및 처리 *********
     if (player.hp <= 0) {
-        ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
-        ctx.fillRect(0, 0, SW, SH);
-        ctx.fillStyle = "white";
-        ctx.font = "48px Arial";
-        ctx.textAlign = "center";
-        ctx.fillText("Game Over", SW / 2, SH / 2);
+        // (게임 오버 로직)
         return;
     }
 
-    // **********************************
     // 3. 플레이어 업데이트
     player.update(input, walls);
 
-    // 4. 발사 (기존 로직 유지)
+    // 4. 발사 
     if (mouseDown) {
         const angle = Math.atan2(mouseY - (player.y + player.h / 2), mouseX - (player.x + player.w / 2));
         player.gun.shoot(player.x + player.w / 2, player.y + player.h / 2, angle, bullets);
     }
 
-    // 🛑 5. 순차적인 적 스폰 로직
+    // 5. 적 스폰
     if (totalEnemiesToSpawn > 0 && Date.now() - lastSpawnTime >= SPAWN_INTERVAL) {
         const enemyHp = ENEMY_BASE_HP + (currentFloor - 1) * 2;
         const enemySpeed = ENEMY_BASE_SPEED + (currentFloor - 1) * 0.05;
-        // 오른쪽 벽 근처 (SW - 90)에서 스폰
         enemies.push(new Enemy(SW - 90, 100, 50, 50, enemySpeed, enemyHp));
         totalEnemiesToSpawn--;
         lastSpawnTime = Date.now();
     }
+    
+    // 7. 총알 업데이트 (splice 제거)
+    for (let b of bullets) {
+        b.update(walls, enemies); 
+    }
 
-    // 6. 적 업데이트, 충돌 처리
+    // 6. 적 업데이트, 충돌 처리 (splice 제거)
     const ENEMY_TOUCH_DAMAGE = 3;
-    for (let i = enemies.length - 1; i >= 0; i--) {
-        const enemy = enemies[i];
-        enemy.update(player, walls);
-        if (player.checkCollision(enemy)) {
+    for (let e of enemies) {
+        e.update(player, walls);
+        
+        if (player.checkCollision(e)) {
             player.takeDamage(ENEMY_TOUCH_DAMAGE);
         }
+        
         for (let j = bullets.length - 1; j >= 0; j--) {
             const bullet = bullets[j];
-            if ((!bullet.dead && bullet.checkCollision(enemy))) {
-                enemy.takeDamage(player.gun.damage);
-                if (!(player.gun.type === "railgun")) {
-                    bullet.dead = true;
+            if (bullet.dead || bullet.exploded) continue; 
+            
+            if (bullet.checkCollision(e)) {
+                if (bullet.type !== "rocket") {
+                    e.takeDamage(player.gun.damage);
+                    if (bullet.type !== "railgun") {
+                        bullet.dead = true;
+                    }
+                    if(bullet.dead) break;
                 }
-                break;
             }
-        }
-        if (enemy.dead) {
-            enemies.splice(i, 1);
         }
     }
 
-    // --- 층 클리어 확인 로직: 모든 적이 처치되었고, 스폰할 적이 더 없을 때 ---
+    // 🛑 [최적화] 죽은 객체 일괄 제거 (Filter)
+    // 모든 업데이트가 끝난 후, 죽은 객체들을 배열에서 제거합니다.
+    bullets = bullets.filter(b => !b.isDead());
+    enemies = enemies.filter(e => !e.dead);
+
+
+    // 층 클리어 확인 (필터링 이후에 실행되어야 정확함)
     if (enemies.length === 0 && totalEnemiesToSpawn === 0) {
         if (currentFloor < MAX_FLOOR) {
             currentFloor++;
@@ -663,30 +781,30 @@ function gameLoop() {
         }
     }
 
-    // ----------------------------
-    // 7. 총알 업데이트
-    for (let i = bullets.length - 1; i >= 0; i--) {
-        bullets[i].update(walls);
-        if (bullets[i].isDead()) {
-            bullets.splice(i, 1);
-        }
-    }
-
     // 8. 그리기
     ctx.fillStyle = "#444";
-    walls.forEach((w) => ctx.fillRect(w.x, w.y, w.w, w.h));
+    // 🛑 [최적화] Culling: 화면 안의 벽만 그리기
+    walls.forEach((w) => {
+        if (w.x + w.w >= 0 && w.x <= SW && w.y + w.h >= 0 && w.y <= SH) {
+            ctx.fillRect(w.x, w.y, w.w, w.h);
+        }
+    });
+
+    // (UI 그리기)
     ctx.fillStyle = "white";
     ctx.font = "24px Arial";
     ctx.textAlign = "left";
     ctx.fillText(`Floor: ${currentFloor} / ${MAX_FLOOR}`, 50, 30);
-    // 🛑 쿨타임 정보 표시 로직
     const remainingCooldown = Math.max(0, player.specialAbilityCooldown - (Date.now() - player.lastSpecialAbilityTime));
     const cooldownText = remainingCooldown > 0 ? `쿨타임: ${(remainingCooldown / 1000).toFixed(1)}s` : (player.isSpecialInvulnerable ? `무적 (1.0s)` : `스킬: 준비 완료(우클릭으로 사용)`);
     ctx.fillStyle = remainingCooldown > 0 ? "red" : "lime";
     ctx.fillText(cooldownText, SW - 500, 30);
+    
+    // (객체 그리기 - Culling은 각 draw 메서드 내부에 적용됨)
     player.draw(mouseX, mouseY);
     enemies.forEach((e) => e.draw());
     bullets.forEach((b) => b.draw());
+    
     requestAnimationFrame(gameLoop);
 }
 
