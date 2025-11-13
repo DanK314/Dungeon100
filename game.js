@@ -709,11 +709,29 @@ function gameLoop() {
 
     // 1. 게임 클리어/오버 확인
     if (currentFloor > MAX_FLOOR) {
-        // (게임 클리어 로직)
+        ctx.clearRect(0, 0, SW, SH);
+        ctx.fillStyle = "#005500";
+        ctx.fillRect(0, 0, SW, SH);
+        ctx.fillStyle = "000000";
+        ctx.font = "80px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText("Clear!!", SW / 2, SH / 2 - 100);
+        ctx.font = "30px Arial";
+        ctx.fillStyle = "FFFFFF";
+        ctx.fillText("You finally get the top of the dungeon tower.", SW / 2, SH / 2 + 50);
         return;
     }
     if (player.hp <= 0) {
-        // (게임 오버 로직)
+        ctx.clearRect(0, 0, SW, SH);
+        ctx.fillStyle = "#FF0000";
+        ctx.fillRect(0, 0, SW, SH);
+        ctx.fillStyle = "000000";
+        ctx.font = "80px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText("Game Over...", SW / 2, SH / 2 - 100);
+        ctx.font = "30px Arial";
+        ctx.fillStyle = "FFFFFF";
+        ctx.fillText(currentFloor + " floors", SW / 2, SH / 2 + 50);
         return;
     }
 
