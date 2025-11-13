@@ -517,7 +517,7 @@ const GUN_SPECS = {
         name_kr: '로켓포',
         desc_kr: '터져요~~',
         damage: 100, // (직격 데미지. 폭발 데미지는 Bullet 클래스에서 별도 처리)
-        fireRate: 1000, // 1초
+        fireRate: 1700, // 1.7초
         bulletSpeed: 5, // (느림)
         length: 50,
         type: 'rocket'
