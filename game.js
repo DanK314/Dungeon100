@@ -99,7 +99,7 @@ class Player extends BoxCollider {
         this.hp -= damage;
         if (this.hp < 0) this.hp = 0;
         this.isInvulnerable = true; // 기본 피격 무적 시간 (0.3초)
-        this.invulnerabilityTime = Date.now() + 300;
+        this.invulnerabilityTime = Date.now() + this.gun.type == 'knife' ? 1000 : 300;
         if (this.hp === 0) {
             console.log("Player Died!");
         }
