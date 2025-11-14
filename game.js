@@ -239,7 +239,7 @@ class Enemy extends BoxCollider {
             referenceX = player.x + player.w / 2; 
         }
         
-        const knockbackMultiplier = isExplosion ? 100 : 1; 
+        const knockbackMultiplier = isExplosion ? 50 : 1; 
         const knockbackForce = damage * 0.1 * knockbackMultiplier; 
 
         this.hp -= damage;
@@ -322,6 +322,7 @@ class Bullet extends BoxCollider {
         this.dead = false;
         this.exploded = false;
         this.explosionTimer = 0;
+        this.accelTimer = 0;
         this.type = type;
 
         this.x += Math.cos(this.angle) * forward;
@@ -349,22 +350,22 @@ class Bullet extends BoxCollider {
             this.explosionTimer++;
             
             // 1. 폭발 종료 시간 체크 (60프레임 = 1초)
-            if (this.explosionTimer >= 60) {
+            if (this.explosionTimer >= 30) {
                 this.dead = true;
                 return;
             }
 
             // 2. 시각 효과 (매 프레임 확장)
-            this.w += 6;
-            this.h += 6;
+            this.w += 18;
+            this.h += 18;
             this.x = this.centerX - this.w / 2;
             this.y = this.centerY - this.h / 2;
 
             // 3. "노란색" 페이즈 (처음 30프레임 = 0.5초) 동안만 데미지 적용
-            const yellowPhaseDuration = 30; 
+            const yellowPhaseDuration = 15; 
             if (this.explosionTimer < yellowPhaseDuration) {
                 
-                const ROCKET_DOT_DAMAGE = 2; // 프레임당 지속 데미지
+                const ROCKET_DOT_DAMAGE = player.gun.damage; // 프레임당 지속 데미지
                 for (let e of enemies) {
                     if (this.checkCollision(e)) {
                         e.takeDamage(ROCKET_DOT_DAMAGE, true, this.centerX);
@@ -403,7 +404,7 @@ class Bullet extends BoxCollider {
                 if (this.type === "rocket") {
                     this.triggerExplosion();
                     return;
-                } else {
+                } else if (this.type !== "railgun") {
                     this.dead = true;
                     return;
                 }
@@ -423,6 +424,12 @@ class Bullet extends BoxCollider {
         // 이동
         this.x = nextX;
         this.y = nextY;
+        if(this.type === "rocket" && this.speed !== 0) {
+            this.accelTimer ++;
+            if(this.accelTimer >= 30) {
+                this.speed += 0.5;
+            }
+        }
     }
 
     draw() {
@@ -434,7 +441,7 @@ class Bullet extends BoxCollider {
         }
         
         if (this.exploded) {
-            const fade = 1 - this.explosionTimer / 60;
+            const fade = 1 - this.explosionTimer / 30;
             ctx.fillStyle = `rgba(255, ${Math.floor(200 * fade)}, 0, ${fade})`; 
             ctx.fillRect(this.x, this.y, this.w, this.h);
         } else {
@@ -444,7 +451,7 @@ class Bullet extends BoxCollider {
     }
 
     isDead() {
-        return this.dead || (this.type !== "rocket" && Date.now() - this.birth > this.life);
+        return this.dead || (Date.now() - this.birth > this.life);
     }
 }
 
@@ -489,7 +496,7 @@ const GUN_SPECS = {
     'RAILGUN': {
         name_kr: '레일건',
         desc_kr: '적을 관통하는 레이저를 쏩니다.',
-        damage: 0.3, // (프레임당 데미지)
+        damage: 0.1, // (프레임당 데미지)
         fireRate: 1, // 0.001초 (지속 발사)
         bulletSpeed: 20,
         length: 20,
@@ -498,11 +505,11 @@ const GUN_SPECS = {
     'TRAPER': {
         name_kr: '지뢰포',
         desc_kr: '고정된 지뢰를 설치합니다.',
-        damage: 0.5, // (프레임당 데미지)
-        fireRate: 1,
+        damage: 2, // (프레임당 데미지)
+        fireRate: 1000,
         bulletSpeed: 0, // (설치형)
         length: 50,
-        type: 'traper'
+        type: 'rocket'
     },
     'KNIFE': {
         name_kr: '칼',
@@ -516,9 +523,9 @@ const GUN_SPECS = {
     'ROCKET': {
         name_kr: '로켓포',
         desc_kr: '터져요~~',
-        damage: 100, // (직격 데미지. 폭발 데미지는 Bullet 클래스에서 별도 처리)
+        damage: 5, // (프레임당 지속 데미지)
         fireRate: 2500, // 1.7초
-        bulletSpeed: 5, // (느림)
+        bulletSpeed: 1,
         length: 50,
         type: 'rocket'
     }
@@ -526,25 +533,25 @@ const GUN_SPECS = {
 
 const MAX_FLOOR = 100;
 let currentFloor = 1;
-const ENEMY_BASE_HP = 50;
-const ENEMY_BASE_SPEED = 2.0;
+const ENEMY_BASE_HP = 40;
+const ENEMY_BASE_SPEED = 1.7;
 let totalEnemiesToSpawn = 0;
 let lastSpawnTime = 0;
-const SPAWN_INTERVAL = 1000; 
+const SPAWN_INTERVAL = 500; 
 
 // ========================== // 적 생성 및 층 관리 함수 정의 // ==========================
 function selectGun(gunType) {
     const spec = GUN_SPECS[gunType];
     if (!spec) return;
     const newGun = new Gun(spec.bulletSpeed, spec.length, spec.fireRate, spec.damage, spec.type);
-    player = new Player(50, 100, 40, 40, newGun.type === 'knife' ? 7 : 5, newGun);
+    player = new Player(50, 100, 40, 40, newGun.type === 'knife' ? 7 : newGun.type === 'traper' ?  6 : 5, newGun);
     gameState = 'playing';
     spawnEnemies();
 }
 
 function spawnEnemies() {
     enemies.length = 0;
-    totalEnemiesToSpawn = Math.min(5, Math.floor(currentFloor / 10) + 1);
+    totalEnemiesToSpawn = Math.min(5, Math.floor(currentFloor / 5) + 1);
     lastSpawnTime = Date.now();
     if (player) { 
         player.x = 50;
@@ -618,7 +625,7 @@ function drawGunSelection() {
         textY += 30;
         ctx.fillText(`연사 속도: ${fireRateSec}초 (${fireRateSec < 1 ? '빠름' : fireRateSec < 2 ? '보통' : '느림'})`, x + 20, textY);
         textY += 30;
-        ctx.fillText(`탄환 종류: ${spec.type === 'shotgun' ? '산탄(5발)' : spec.type === 'knife' ? '근접' : '일반탄'}`, x + 20, textY);
+        ctx.fillText(`탄환 종류: ${spec.type === 'shotgun' ? '산탄(5발)' : spec.type === 'knife' ? '근접' : spec.type === "rocket" ? '폭탄' : '일반'}`, x + 20, textY);
         textY += 30;
         ctx.font = "8px Arial";
         ctx.fillStyle = "#ccc";
@@ -725,7 +732,7 @@ function gameLoop() {
         ctx.clearRect(0, 0, SW, SH);
         ctx.fillStyle = "#FF0000";
         ctx.fillRect(0, 0, SW, SH);
-        ctx.fillStyle = "000000";
+        ctx.fillStyle = "#000000";
         ctx.font = "80px Arial";
         ctx.textAlign = "center";
         ctx.fillText("Game Over...", SW / 2, SH / 2 - 100);
@@ -746,8 +753,8 @@ function gameLoop() {
 
     // 5. 적 스폰
     if (totalEnemiesToSpawn > 0 && Date.now() - lastSpawnTime >= SPAWN_INTERVAL) {
-        const enemyHp = ENEMY_BASE_HP + (currentFloor - 1) * 2;
-        const enemySpeed = ENEMY_BASE_SPEED + (currentFloor - 1) * 0.05;
+        const enemyHp = ENEMY_BASE_HP + (currentFloor - 1) * 1.5;
+        const enemySpeed = ENEMY_BASE_SPEED + (currentFloor - 1) * 0.01;
         enemies.push(new Enemy(SW - 90, 100, 50, 50, enemySpeed, enemyHp));
         totalEnemiesToSpawn--;
         lastSpawnTime = Date.now();
