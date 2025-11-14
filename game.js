@@ -364,7 +364,7 @@ class Bullet extends BoxCollider {
             const yellowPhaseDuration = 30; 
             if (this.explosionTimer < yellowPhaseDuration) {
                 
-                const ROCKET_DOT_DAMAGE = 1; // 프레임당 지속 데미지
+                const ROCKET_DOT_DAMAGE = 2; // 프레임당 지속 데미지
                 for (let e of enemies) {
                     if (this.checkCollision(e)) {
                         e.takeDamage(ROCKET_DOT_DAMAGE, true, this.centerX);
