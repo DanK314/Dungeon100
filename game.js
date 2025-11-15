@@ -88,7 +88,7 @@ class Player extends BoxCollider {
         const now = Date.now();
         if (now - this.lastSpecialAbilityTime >= this.specialAbilityCooldown && this.gun.type === 'knife') {
             this.isSpecialInvulnerable = true;
-            const invulDuration = 1000; 
+            const invulDuration = 10000; 
             this.specialInvulnerabilityTime = now + invulDuration; 
             this.lastSpecialAbilityTime = now;
             this.speed += 5;
@@ -96,14 +96,51 @@ class Player extends BoxCollider {
             this.gun.damage += 10;
             console.log(`Special Ability Used: ${invulDuration / 1000} sec Invulnerability, Speed+5, Damage+10!`);
             return true;
-        } else if (now - this.lastSpecialAbilityTime >= this.specialAbilityCooldown) {
-            const healAmount = 15;
+        } else if (now - this.lastSpecialAbilityTime >= this.specialAbilityCooldown && this.gun.type === 'traper') {
+            const healAmount = 30;
+            this.hp += healAmount;
+            this.hp = this.hp > 100 ? 100 : this.hp;
+            const FireRateMultiplier = 0.1;
+            this.gun.fireRate *= FireRateMultiplier;
+            this.lastSpecialAbilityTime = now;
+            setTimeout(() => {
+                this.gun.fireRate /= FireRateMultiplier;
+            }, 10000);
+            console.log(`Special Ability Used: Healed +${healAmount} HP.`);
+            return true;
+        } else if (now - this.lastSpecialAbilityTime >= this.specialAbilityCooldown && this.gun.type === 'rocket') {
+            const healAmount = 20;
+            this.hp += healAmount;
+            this.hp = this.hp > 100 ? 100 : this.hp;
+            const originalDamage = this.gun.damage;
+            this.gun.damage += 20;
+            this.lastSpecialAbilityTime = now;
+            setTimeout(() => {
+                this.gun.damage = originalDamage;
+            }, 10000);
+            console.log(`Special Ability Used: Healed +${healAmount} HP.`);
+        }else if (now - this.lastSpecialAbilityTime >= this.specialAbilityCooldown && this.gun.type === 'sniper') {
+            const healAmount = 30;
+            this.hp += healAmount;
+            this.hp = this.hp > 100 ? 100 : this.hp;
+            const originalReload = this.gun.fireRate;
+            this.gun.fireRate /= 4;
+            this.lastSpecialAbilityTime = now;
+            setTimeout(() => {
+                this.gun.fireRate = originalReload;
+            }, 10000);
+            this.lastSpecialAbilityTime = now;
+            console.log(`Special Ability Used: Healed +${healAmount} HP.`);
+            return true;
+        }else if(now - this.lastSpecialAbilityTime >= this.specialAbilityCooldown) {
+            const healAmount = 20;
             this.hp += healAmount;
             this.hp = this.hp > 100 ? 100 : this.hp;
             this.lastSpecialAbilityTime = now;
             console.log(`Special Ability Used: Healed +${healAmount} HP.`);
             return true;
         }
+
         return false;
     }
     takeDamage(damage) {
@@ -311,7 +348,7 @@ class Gun {
 // ========================== // Bullet 클래스 (지속 데미지 로켓) // ==========================
 class Bullet extends BoxCollider {
     constructor(x, y, angle, speed, life = 5000, forward = 50, type = "normal") {
-        const size = type === "rocket" ? 20 : 8;
+        const size = (type === "rocket" || type === "traper") ? 20 : 8;
         super(x, y, size, size);
         this.x -= this.w / 2;
         this.y -= this.h / 2;
@@ -389,7 +426,7 @@ class Bullet extends BoxCollider {
                     testBox.y < w.y + w.h &&
                     testBox.y + testBox.h > w.y)
             ) {
-                if (this.type === "rocket") {
+                if (this.type === "rocket" || this.type === "traper") {
                     this.triggerExplosion();
                 } else {
                     this.dead = true;
@@ -401,7 +438,7 @@ class Bullet extends BoxCollider {
         // 2️⃣ 적 충돌
         for (let e of enemies) {
             if (this.checkCollision(e)) {
-                if (this.type === "rocket") {
+                if (this.type === "rocket" || this.type === "traper") {
                     this.triggerExplosion();
                     return;
                 } else if (this.type !== "railgun") {
@@ -413,7 +450,7 @@ class Bullet extends BoxCollider {
 
         // 3️⃣ 화면 경계
         if (nextY + this.h >= SH || nextY <= 0 || nextX <= 0 || nextX + this.w >= SW) {
-            if (this.type === "rocket") {
+            if (this.type === "rocket" || this.type === "traper") {
                 this.triggerExplosion();
             } else {
                 this.dead = true;
@@ -445,7 +482,7 @@ class Bullet extends BoxCollider {
             ctx.fillStyle = `rgba(255, ${Math.floor(200 * fade)}, 0, ${fade})`; 
             ctx.fillRect(this.x, this.y, this.w, this.h);
         } else {
-            ctx.fillStyle = this.type === "rocket" ? "red" : "orange";
+            ctx.fillStyle = (this.type === "rocket" || this.type === "traper") ? "red" : "orange";
             ctx.fillRect(this.x, this.y, this.w, this.h);
         }
     }
@@ -482,7 +519,7 @@ const GUN_SPECS = {
         fireRate: 2000, // 2초
         bulletSpeed: 30,
         length: 150,
-        type: 'revolver'
+        type: 'sniper'
     },
     'SHOTGUN': {
         name_kr: '산탄총',
@@ -509,7 +546,7 @@ const GUN_SPECS = {
         fireRate: 1000,
         bulletSpeed: 0, // (설치형)
         length: 50,
-        type: 'rocket'
+        type: 'traper'
     },
     'KNIFE': {
         name_kr: '칼',
@@ -578,7 +615,7 @@ setupWalls();
 // (drawStartScreen, drawGunSelection 함수는 동일하게 유지)
 function drawStartScreen() {
     ctx.clearRect(0, 0, SW, SH);
-    ctx.fillStyle = "#222";
+    ctx.fillStyle = "#000";
     ctx.fillRect(0, 0, SW, SH);
     ctx.fillStyle = "white";
     ctx.font = "80px Arial";
@@ -590,7 +627,7 @@ function drawStartScreen() {
 }
 function drawGunSelection() {
     ctx.clearRect(0, 0, SW, SH);
-    ctx.fillStyle = "#222";
+    ctx.fillStyle = "#555";
     ctx.fillRect(0, 0, SW, SH);
     ctx.fillStyle = "white";
     ctx.font = "40px Arial";
@@ -608,9 +645,22 @@ function drawGunSelection() {
         const spec = GUN_SPECS[type];
         const x = startX + index * (boxWidth + padding);
         const y = startY;
-        ctx.fillStyle = "#333";
+        ctx.fillStyle = "#0F0F0F";
         ctx.fillRect(x, y, boxWidth, boxHeight);
-        ctx.strokeStyle = "white";
+        switch (spec.type) {
+            case "rocket":
+                ctx.strokeStyle = "#FF0000";
+                break;
+            case "traper":
+                ctx.strokeStyle = "#FFEE00";
+                break;
+            case "knife":
+                ctx.strokeStyle = "#00EEFF";
+                break;
+            default:
+                ctx.strokeStyle = "#FFFFFF";
+                break;
+        }
         ctx.lineWidth = 3;
         ctx.strokeRect(x, y, boxWidth, boxHeight);
         ctx.fillStyle = "cyan";
@@ -625,7 +675,28 @@ function drawGunSelection() {
         textY += 30;
         ctx.fillText(`연사 속도: ${fireRateSec}초 (${fireRateSec < 1 ? '빠름' : fireRateSec < 2 ? '보통' : '느림'})`, x + 20, textY);
         textY += 30;
-        ctx.fillText(`탄환 종류: ${spec.type === 'shotgun' ? '산탄(5발)' : spec.type === 'knife' ? '근접' : spec.type === "rocket" ? '폭탄' : '일반'}`, x + 20, textY);
+        let bulletType;
+        switch (spec.type) {
+            case "rocket":
+                bulletType = "로켓";
+                break;
+            case "traper":
+                bulletType = "지뢰";
+                break;
+            case "knife":
+                bulletType = "근접";
+                break;
+            case "shotgun":
+                bulletType = "산탄";
+                break;
+            case "railgun":
+                bulletType = "관통 레이저";
+                break;
+            default:
+                bulletType = "일반 탄환";
+                break;
+        }
+        ctx.fillText("탄환 종류:"+bulletType, x + 20, textY);
         textY += 30;
         ctx.font = "8px Arial";
         ctx.fillStyle = "#ccc";
@@ -779,7 +850,7 @@ function gameLoop() {
             if (bullet.dead || bullet.exploded) continue; 
             
             if (bullet.checkCollision(e)) {
-                if (bullet.type !== "rocket") {
+                if (bullet.type !== "rocket" && bullet.type !== "traper") {
                     e.takeDamage(player.gun.damage);
                     if (bullet.type !== "railgun") {
                         bullet.dead = true;
