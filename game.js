@@ -533,7 +533,7 @@ const GUN_SPECS = {
     'RAILGUN': {
         name_kr: '레일건',
         desc_kr: '적을 관통하는 레이저를 쏩니다.',
-        damage: 0.1, // (프레임당 데미지)
+        damage: 0.05, // (프레임당 데미지)
         fireRate: 1, // 0.001초 (지속 발사)
         bulletSpeed: 20,
         length: 20,
@@ -543,7 +543,7 @@ const GUN_SPECS = {
         name_kr: '지뢰포',
         desc_kr: '고정된 지뢰를 설치합니다.',
         damage: 2, // (프레임당 데미지)
-        fireRate: 1000,
+        fireRate: 2000,
         bulletSpeed: 0, // (설치형)
         length: 50,
         type: 'traper'
@@ -561,7 +561,7 @@ const GUN_SPECS = {
         name_kr: '로켓포',
         desc_kr: '터져요~~',
         damage: 5, // (프레임당 지속 데미지)
-        fireRate: 2500, // 1.7초
+        fireRate: 3000, // 1.7초
         bulletSpeed: 1,
         length: 50,
         type: 'rocket'
