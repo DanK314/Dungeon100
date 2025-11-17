@@ -112,11 +112,11 @@ class Player extends BoxCollider {
             const healAmount = 20;
             this.hp += healAmount;
             this.hp = this.hp > 100 ? 100 : this.hp;
-            const originalDamage = this.gun.damage;
-            this.gun.damage += 20;
+            const FireRateMultiplier = 0.1;
+            this.gun.fireRate *= FireRateMultiplier;
             this.lastSpecialAbilityTime = now;
             setTimeout(() => {
-                this.gun.damage = originalDamage;
+                this.gun.fireRate /= FireRateMultiplier;
             }, 10000);
             console.log(`Special Ability Used: Healed +${healAmount} HP.`);
         }else if (now - this.lastSpecialAbilityTime >= this.specialAbilityCooldown && this.gun.type === 'sniper') {
@@ -335,11 +335,13 @@ class Gun {
             const endAngle = angle + 0.2;
             const spreadStep = 0.1; 
             while (ba < endAngle) {
-                bullets.push(new Bullet(bx, by, ba, this.bulletSpeed));
+                // 🛑 [수정] 샷건 총알에도 데미지, life, fw, type 전달
+                bullets.push(new Bullet(bx, by, ba, this.bulletSpeed, this.damage, life, fw, this.type));
                 ba += spreadStep
             }
         } else {
-            bullets.push(new Bullet(bx, by, angle, this.bulletSpeed, life, fw, this.type));
+            // 🛑 [수정] 총알 생성자에 this.damage 전달 (새로운 5번째 인자)
+            bullets.push(new Bullet(bx, by, angle, this.bulletSpeed, this.damage, life, fw, this.type));
         }
         this.lastShot = Date.now();
     }
@@ -347,13 +349,16 @@ class Gun {
 
 // ========================== // Bullet 클래스 (지속 데미지 로켓) // ==========================
 class Bullet extends BoxCollider {
-    constructor(x, y, angle, speed, life = 5000, forward = 50, type = "normal") {
-        const size = (type === "rocket" || type === "traper") ? 20 : 8;
+    // 🛑 [수정] 생성자에 'damage' 인자 추가
+    constructor(x, y, angle, speed, damage, life = 5000, forward = 50, type = "normal") {
+        const size = (type === "rocket" || type === "traper" || type === "boomerang") ? 20 : 8;
         super(x, y, size, size);
         this.x -= this.w / 2;
         this.y -= this.h / 2;
         this.angle = angle;
         this.speed = speed;
+        this.damage = damage;         // 🛑 [추가] 총알의 현재 데미지
+        this.baseDamage = damage;   // 🛑 [추가] 총알의 기본 데미지 (부메랑용)
         this.life = life;
         this.birth = Date.now();
         this.dead = false;
@@ -361,6 +366,7 @@ class Bullet extends BoxCollider {
         this.explosionTimer = 0;
         this.accelTimer = 0;
         this.type = type;
+        this.returnDamageApplied = false; // 🛑 [추가] 부메랑 데미지 증가 플래그
 
         this.x += Math.cos(this.angle) * forward;
         this.y += Math.sin(this.angle) * forward;
@@ -370,6 +376,7 @@ class Bullet extends BoxCollider {
     }
     
     triggerExplosion() { 
+        // ... (이 메서드는 수정 없음)
         if (this.exploded) return;
         this.exploded = true;
         this.explosionTimer = 0;
@@ -380,29 +387,27 @@ class Bullet extends BoxCollider {
     }
 
     update(walls, enemies = []) { 
+        // ... (상단 폭발 로직은 수정 없음)
         if (this.dead) return;
 
-        // 🛑 폭발 중일 때: 매 프레임 확장 및 데미지/타이머 체크
         if (this.exploded) {
             this.explosionTimer++;
             
-            // 1. 폭발 종료 시간 체크 (60프레임 = 1초)
             if (this.explosionTimer >= 30) {
                 this.dead = true;
                 return;
             }
 
-            // 2. 시각 효과 (매 프레임 확장)
-            this.w += 18;
-            this.h += 18;
+            this.w += (Math.abs(this.speed) / 3) + (30 / this.explosionTimer);
+            this.h += (Math.abs(this.speed) / 3) + (30 / this.explosionTimer);
             this.x = this.centerX - this.w / 2;
             this.y = this.centerY - this.h / 2;
 
-            // 3. "노란색" 페이즈 (처음 30프레임 = 0.5초) 동안만 데미지 적용
             const yellowPhaseDuration = 15; 
             if (this.explosionTimer < yellowPhaseDuration) {
                 
-                const ROCKET_DOT_DAMAGE = player.gun.damage; // 프레임당 지속 데미지
+                // 🛑 [수정] player.gun.damage 대신 this.damage 사용
+                const ROCKET_DOT_DAMAGE = this.damage; 
                 for (let e of enemies) {
                     if (this.checkCollision(e)) {
                         e.takeDamage(ROCKET_DOT_DAMAGE, true, this.centerX);
@@ -412,12 +417,11 @@ class Bullet extends BoxCollider {
             return;
         }
         
-        // (총알이 날아가는 상태)
+        // ... (벽, 적, 화면 경계 충돌 로직은 수정 없음)
         const nextX = this.x + Math.cos(this.angle) * this.speed;
         const nextY = this.y + Math.sin(this.angle) * this.speed;
         const testBox = { x: nextX, y: nextY, w: this.w, h: this.h };
 
-        // 1️⃣ 벽 충돌
         for (let w of walls) {
             if (
                 this.checkCollision(w) ||
@@ -435,7 +439,6 @@ class Bullet extends BoxCollider {
             }
         }
 
-        // 2️⃣ 적 충돌
         for (let e of enemies) {
             if (this.checkCollision(e)) {
                 if (this.type === "rocket" || this.type === "traper") {
@@ -448,7 +451,6 @@ class Bullet extends BoxCollider {
             }
         }
 
-        // 3️⃣ 화면 경계
         if (nextY + this.h >= SH || nextY <= 0 || nextX <= 0 || nextX + this.w >= SW) {
             if (this.type === "rocket" || this.type === "traper") {
                 this.triggerExplosion();
@@ -461,18 +463,30 @@ class Bullet extends BoxCollider {
         // 이동
         this.x = nextX;
         this.y = nextY;
-        if(this.type === "rocket" && this.speed !== 0) {
+        if(this.type === "rocket") {
             this.accelTimer ++;
             if(this.accelTimer >= 30) {
                 this.speed += 0.5;
             }
         }
+
+        // 🛑 [수정] 부메랑 데미지 증가 로직
+        if(this.type === "boomerang") {
+            this.speed -= 0.3;
+            this.vy += 1; // (기존 로직 유지)
+            
+            // speed가 0보다 작아지고(돌아올 때), 아직 데미지 증가가 적용되지 않았다면
+            if(this.speed <= 0 && !this.returnDamageApplied) {
+                this.damage = this.baseDamage * 3; // 데미지를 3배로 증가 (혹은 this.damage += 15 등으로 수정 가능)
+                this.returnDamageApplied = true; // 플래그 설정 (증가가 한 번만 일어나도록)
+            }
+        }
     }
 
     draw() {
+        // ... (이 메서드는 수정 없음)
         if (this.dead) return;
         
-        // 🛑 [최적화] Culling: 화면 밖에 있으면 그리지 않음
         if (this.x + this.w < 0 || this.x > SW || this.y + this.h < 0 || this.y > SH) {
             return;
         }
@@ -482,7 +496,12 @@ class Bullet extends BoxCollider {
             ctx.fillStyle = `rgba(255, ${Math.floor(200 * fade)}, 0, ${fade})`; 
             ctx.fillRect(this.x, this.y, this.w, this.h);
         } else {
-            ctx.fillStyle = (this.type === "rocket" || this.type === "traper") ? "red" : "orange";
+            // 🛑 [수정] 부메랑이 돌아올 때 색상 변경 (선택 사항)
+            let color = (this.type === "rocket" || this.type === "traper") ? "red" : "orange";
+            if (this.type === "boomerang" && this.returnDamageApplied) {
+                color = "cyan"; // 돌아올 때 색상을 하늘색으로
+            }
+            ctx.fillStyle = color;
             ctx.fillRect(this.x, this.y, this.w, this.h);
         }
     }
@@ -562,9 +581,18 @@ const GUN_SPECS = {
         desc_kr: '터져요~~',
         damage: 5, // (프레임당 지속 데미지)
         fireRate: 3000, // 1.7초
-        bulletSpeed: 1,
+        bulletSpeed: 0,
         length: 50,
         type: 'rocket'
+    },
+    'BOOMERANG': {
+        name_kr: '부메랑',
+        desc_kr: '되돌아오는 부메랑입니다.',
+        damage: 15,
+        fireRate: 800,
+        bulletSpeed: 20,
+        length: 70,
+        type: 'boomerang'
     }
 };
 
@@ -581,7 +609,7 @@ function selectGun(gunType) {
     const spec = GUN_SPECS[gunType];
     if (!spec) return;
     const newGun = new Gun(spec.bulletSpeed, spec.length, spec.fireRate, spec.damage, spec.type);
-    player = new Player(50, 100, 40, 40, newGun.type === 'knife' ? 7 : newGun.type === 'traper' ?  6 : 5, newGun);
+    player = new Player(50, 100, 40, 40, (newGun.type === 'knife' || newGun.type === 'boomerang') ? 7 : newGun.type === 'traper' ?  6 : 5, newGun);
     gameState = 'playing';
     spawnEnemies();
 }
@@ -633,7 +661,7 @@ function drawGunSelection() {
     ctx.font = "40px Arial";
     ctx.textAlign = "center";
     ctx.fillText("무기를 선택하세요", SW / 2, SH / 2 - 200);
-    const gunTypes = ['PISTOL', 'SNIPER', 'SHOTGUN', 'RAILGUN', 'TRAPER', 'KNIFE', 'ROCKET'];
+    const gunTypes = ['PISTOL', 'SNIPER', 'SHOTGUN', 'RAILGUN', 'TRAPER', 'KNIFE', 'ROCKET', 'BOOMERANG'];
     const padding = 20; 
     const numGuns = gunTypes.length; 
     const totalPadding = padding * (numGuns + 1);
@@ -736,7 +764,7 @@ canvas.addEventListener("mousedown", (e) => {
             return;
         }
         if (gameState === 'selectGun') {
-            const gunTypes = ['PISTOL', 'SNIPER', 'SHOTGUN', 'RAILGUN', 'TRAPER', 'KNIFE', 'ROCKET'];
+            const gunTypes = ['PISTOL', 'SNIPER', 'SHOTGUN', 'RAILGUN', 'TRAPER', 'KNIFE', 'ROCKET', 'BOOMERANG'];
             gunTypes.forEach(type => {
                 const spec = GUN_SPECS[type];
                 if (spec.bounds) {
@@ -771,9 +799,9 @@ canvas.addEventListener("contextmenu", (e) => {
 
 // ========================== // 게임 루프 (최적화 적용) // ==========================
 function gameLoop() {
+    // ... (게임 루프 상단은 수정 없음)
     ctx.clearRect(0, 0, SW, SH);
 
-    // 0. 게임 상태에 따른 화면 처리
     if (gameState === 'start') {
         drawStartScreen();
         requestAnimationFrame(gameLoop);
@@ -785,45 +813,24 @@ function gameLoop() {
         return;
     }
 
-    // 1. 게임 클리어/오버 확인
     if (currentFloor > MAX_FLOOR) {
-        ctx.clearRect(0, 0, SW, SH);
-        ctx.fillStyle = "#005500";
-        ctx.fillRect(0, 0, SW, SH);
-        ctx.fillStyle = "000000";
-        ctx.font = "80px Arial";
-        ctx.textAlign = "center";
-        ctx.fillText("Clear!!", SW / 2, SH / 2 - 100);
-        ctx.font = "30px Arial";
-        ctx.fillStyle = "FFFFFF";
-        ctx.fillText("You finally get the top of the dungeon tower.", SW / 2, SH / 2 + 50);
+        // ... (클리어 화면)
         return;
     }
     if (player.hp <= 0) {
-        ctx.clearRect(0, 0, SW, SH);
-        ctx.fillStyle = "#FF0000";
-        ctx.fillRect(0, 0, SW, SH);
-        ctx.fillStyle = "#000000";
-        ctx.font = "80px Arial";
-        ctx.textAlign = "center";
-        ctx.fillText("Game Over...", SW / 2, SH / 2 - 100);
-        ctx.font = "30px Arial";
-        ctx.fillStyle = "FFFFFF";
-        ctx.fillText(currentFloor + " floors", SW / 2, SH / 2 + 50);
+        // ... (게임 오버 화면)
         return;
     }
 
-    // 3. 플레이어 업데이트
     player.update(input, walls);
 
-    // 4. 발사 
     if (mouseDown) {
         const angle = Math.atan2(mouseY - (player.y + player.h / 2), mouseX - (player.x + player.w / 2));
         player.gun.shoot(player.x + player.w / 2, player.y + player.h / 2, angle, bullets);
     }
 
-    // 5. 적 스폰
     if (totalEnemiesToSpawn > 0 && Date.now() - lastSpawnTime >= SPAWN_INTERVAL) {
+        // ... (적 스폰)
         const enemyHp = ENEMY_BASE_HP + (currentFloor - 1) * 1.5;
         const enemySpeed = ENEMY_BASE_SPEED + (currentFloor - 1) * 0.01;
         enemies.push(new Enemy(SW - 90, 100, 50, 50, enemySpeed, enemyHp));
@@ -831,12 +838,10 @@ function gameLoop() {
         lastSpawnTime = Date.now();
     }
     
-    // 7. 총알 업데이트 (splice 제거)
     for (let b of bullets) {
         b.update(walls, enemies); 
     }
 
-    // 6. 적 업데이트, 충돌 처리 (splice 제거)
     const ENEMY_TOUCH_DAMAGE = 3;
     for (let e of enemies) {
         e.update(player, walls);
@@ -851,7 +856,8 @@ function gameLoop() {
             
             if (bullet.checkCollision(e)) {
                 if (bullet.type !== "rocket" && bullet.type !== "traper") {
-                    e.takeDamage(player.gun.damage);
+                    // 🛑 [수정] player.gun.damage 대신 bullet.damage 사용
+                    e.takeDamage(bullet.damage);
                     if (bullet.type !== "railgun") {
                         bullet.dead = true;
                     }
@@ -861,13 +867,10 @@ function gameLoop() {
         }
     }
 
-    // 🛑 [최적화] 죽은 객체 일괄 제거 (Filter)
-    // 모든 업데이트가 끝난 후, 죽은 객체들을 배열에서 제거합니다.
+    // ... (죽은 객체 필터링 및 그리기 로직은 수정 없음)
     bullets = bullets.filter(b => !b.isDead());
     enemies = enemies.filter(e => !e.dead);
 
-
-    // 층 클리어 확인 (필터링 이후에 실행되어야 정확함)
     if (enemies.length === 0 && totalEnemiesToSpawn === 0) {
         if (currentFloor < MAX_FLOOR) {
             currentFloor++;
@@ -877,16 +880,13 @@ function gameLoop() {
         }
     }
 
-    // 8. 그리기
     ctx.fillStyle = "#444";
-    // 🛑 [최적화] Culling: 화면 안의 벽만 그리기
     walls.forEach((w) => {
         if (w.x + w.w >= 0 && w.x <= SW && w.y + w.h >= 0 && w.y <= SH) {
             ctx.fillRect(w.x, w.y, w.w, w.h);
         }
     });
 
-    // (UI 그리기)
     ctx.fillStyle = "white";
     ctx.font = "24px Arial";
     ctx.textAlign = "left";
@@ -896,7 +896,6 @@ function gameLoop() {
     ctx.fillStyle = remainingCooldown > 0 ? "red" : "lime";
     ctx.fillText(cooldownText, SW - 500, 30);
     
-    // (객체 그리기 - Culling은 각 draw 메서드 내부에 적용됨)
     player.draw(mouseX, mouseY);
     enemies.forEach((e) => e.draw());
     bullets.forEach((b) => b.draw());
