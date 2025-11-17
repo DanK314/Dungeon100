@@ -814,11 +814,28 @@ function gameLoop() {
     }
 
     if (currentFloor > MAX_FLOOR) {
-        // ... (클리어 화면)
+        ctx.clearRect(0, 0, SW, SH);
+        ctx.fillStyle = "#000";
+        ctx.fillRect(0, 0, SW, SH);
+        ctx.fillStyle = "white";
+        ctx.font = "80px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText("클리어!", SW / 2, SH / 2 - 100);
+        ctx.font = "30px Arial";
+        ctx.fillStyle = "#0000FF";
+        ctx.fillText("100층을 통과하셨습니다~", SW / 2, SH / 2 + 50);
         return;
     }
     if (player.hp <= 0) {
-        // ... (게임 오버 화면)
+        ctx.clearRect(0, 0, SW, SH);
+        ctx.fillStyle = "#FFF";
+        ctx.fillRect(0, 0, SW, SH);
+        ctx.fillStyle = "#000";
+        ctx.font = "80px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText("Game Over", SW / 2, SH / 2 - 100);
+        ctx.font = "30px Arial";
+        ctx.fillText("" + currentFloor + "'s floor", SW / 2, SH / 2 + 50);
         return;
     }
 
