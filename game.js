@@ -61,7 +61,9 @@ class BoxCollider {
     }
 }
 
-// ========================== // 플레이어 클래스 // ==========================
+// ==========================
+// 플레이어 클래스
+// ==========================
 class Player extends BoxCollider {
     constructor(x, y, w, h, speed, gun) {
         super(x, y, w, h);
@@ -80,23 +82,33 @@ class Player extends BoxCollider {
         this.specialAbilityCooldown = 30000;
         this.lastSpecialAbilityTime = 0;
     }
+
     applyGravity(gravity) {
         this.vy += gravity;
         if (this.vy > 15) this.vy = 15;
     }
+
     useSpecialAbility() {
         const now = Date.now();
-        if (now - this.lastSpecialAbilityTime >= this.specialAbilityCooldown && this.gun.type === 'knife') {
+        // 🛑 [수정] 쿨타임 체크를 맨 위로 이동
+        if (now - this.lastSpecialAbilityTime < this.specialAbilityCooldown) {
+            const remaining = Math.max(0, this.specialAbilityCooldown - (Date.now() - this.lastSpecialAbilityTime));
+            console.log(`Special Ability on cooldown. Remaining: ${(remaining / 1000).toFixed(2)}s`);
+            return false;
+        }
+
+        if (this.gun.type === 'knife') {
             this.isSpecialInvulnerable = true;
-            const invulDuration = 10000; 
-            this.specialInvulnerabilityTime = now + invulDuration; 
+            const invulDuration = 10000;
+            this.specialInvulnerabilityTime = now + invulDuration;
             this.lastSpecialAbilityTime = now;
             this.speed += 5;
             this.hp += this.hp < 20 ? 30 : 0;
             this.gun.damage += 10;
             console.log(`Special Ability Used: ${invulDuration / 1000} sec Invulnerability, Speed+5, Damage+10!`);
             return true;
-        } else if (now - this.lastSpecialAbilityTime >= this.specialAbilityCooldown && this.gun.type === 'traper') {
+
+        } else if (this.gun.type === 'traper') {
             const healAmount = 30;
             this.hp += healAmount;
             this.hp = this.hp > 100 ? 100 : this.hp;
@@ -108,18 +120,35 @@ class Player extends BoxCollider {
             }, 10000);
             console.log(`Special Ability Used: Healed +${healAmount} HP.`);
             return true;
-        } else if (now - this.lastSpecialAbilityTime >= this.specialAbilityCooldown && this.gun.type === 'rocket') {
+        
+        // 🛑 [추가] 샷건 스킬 로직
+        } else if (this.gun.type === 'shotgun') {
+            this.gun.SpecialAbility = true; // Gun 클래스의 플래그 활성화
+            this.lastSpecialAbilityTime = now;
+
+            setTimeout(() => {
+                this.gun.SpecialAbility = false; // 10초 뒤 비활성화
+            }, 10000); 
+
+            console.log(`Special Ability Used: Shotgun spread doubled for 10 sec!`);
+            return true;
+
+        } else if (this.gun.type === 'rocket') {
             const healAmount = 20;
             this.hp += healAmount;
             this.hp = this.hp > 100 ? 100 : this.hp;
             const FireRateMultiplier = 0.1;
             this.gun.fireRate *= FireRateMultiplier;
             this.lastSpecialAbilityTime = now;
+            TickFreeze = true;
             setTimeout(() => {
                 this.gun.fireRate /= FireRateMultiplier;
-            }, 10000);
+                TickFreeze = false;
+            }, 3000);
             console.log(`Special Ability Used: Healed +${healAmount} HP.`);
-        }else if (now - this.lastSpecialAbilityTime >= this.specialAbilityCooldown && this.gun.type === 'sniper') {
+            return true; // 🛑 [수정] return true 추가
+
+        } else if (this.gun.type === 'sniper') {
             const healAmount = 30;
             this.hp += healAmount;
             this.hp = this.hp > 100 ? 100 : this.hp;
@@ -132,7 +161,28 @@ class Player extends BoxCollider {
             this.lastSpecialAbilityTime = now;
             console.log(`Special Ability Used: Healed +${healAmount} HP.`);
             return true;
-        }else if(now - this.lastSpecialAbilityTime >= this.specialAbilityCooldown) {
+
+        } else if(this.gun.type === 'revolver') {
+            const healAmount = 20;
+            this.hp += healAmount;
+            this.hp = this.hp > 100 ? 100 : this.hp;
+            this.lastSpecialAbilityTime = now;
+            const angle = Math.atan2(mouseY - (this.y + this.h / 2), mouseX - (this.x + this.w / 2)); // 🛑 [수정] player -> this
+            bullets.push(new Bullet(this.x, this.y, angle, 15, 30, 10000, 0, "bomb"));
+            console.log(`Special Ability Used: Healed +${healAmount} HP.`);
+            return true;
+        
+        } else if (this.gun.type === 'boomerang') {
+            this.gun.SpecialAbility = true; // Gun 클래스의 플래그 활성화
+            this.lastSpecialAbilityTime = now;
+
+            setTimeout(() => {
+                this.gun.SpecialAbility = false; // 10초 뒤 비활성화
+            }, 10000); 
+
+            console.log(`Special Ability Used: Shotgun spread doubled for 10 sec!`);
+            return true;
+        } else { 
             const healAmount = 20;
             this.hp += healAmount;
             this.hp = this.hp > 100 ? 100 : this.hp;
@@ -140,9 +190,8 @@ class Player extends BoxCollider {
             console.log(`Special Ability Used: Healed +${healAmount} HP.`);
             return true;
         }
-
-        return false;
     }
+
     takeDamage(damage) {
         if (this.hp <= 0 || this.isInvulnerable || this.isSpecialInvulnerable) return;
         this.hp -= damage;
@@ -153,20 +202,28 @@ class Player extends BoxCollider {
             console.log("Player Died!");
         }
     }
+
     update(input, walls) {
         if (this.hp <= 0) return;
+
         if (this.isSpecialInvulnerable && Date.now() > this.specialInvulnerabilityTime) {
             this.isSpecialInvulnerable = false;
-            this.speed = this.defspeed; 
-            this.gun.damage -= 10;
+            // 🛑 [수정] 칼 스킬 종료 시 스탯 원복 (defspeed 사용)
+            if (this.gun.type === 'knife') { 
+                this.speed = this.defspeed;
+                this.gun.damage -= 10;
+            }
             console.log("Special Ability Ended.");
         }
+
         if (this.isInvulnerable && Date.now() > this.invulnerabilityTime) {
             this.isInvulnerable = false;
         }
+
         this.vx = 0;
         if (input["a"] || input["ArrowLeft"]) this.vx = -this.speed;
         if (input["d"] || input["ArrowRight"]) this.vx = this.speed;
+
         if ((input["w"] || input["ArrowUp"])) {
             if (this.jumpCount < this.maxJumps && !this.jumpLocked) {
                 this.vy = -12;
@@ -174,52 +231,67 @@ class Player extends BoxCollider {
                 this.jumpLocked = true;
             }
         }
+
         this.applyGravity(0.6);
         this.x += this.vx;
         this.y += this.vy;
+
         this.onGround = false;
         for (let w of walls) {
             if (this.checkCollision(w)) {
                 this.resolveCollision(w);
-                if (this.y + this.h <= w.y + 10) {
+                if (this.y + this.h <= w.y + 10) { // 땅에 닿았는지 체크
                     this.onGround = true;
                     this.jumpCount = 0;
                 }
             }
         }
     }
+
     draw(mouseX, mouseY) {
         const angle = Math.atan2(mouseY - (this.y + this.h / 2), mouseX - (this.x + this.w / 2));
         const isInvul = this.isInvulnerable || this.isSpecialInvulnerable;
+        
+        // 무적 시 깜빡임
         if (isInvul && Date.now() % 100 < 50) {
-            return;
+            return; 
         }
+
         ctx.fillStyle = "#44aaff";
         ctx.fillRect(this.x, this.y, this.w, this.h);
+
+        // 총구 그리기
         ctx.save();
         ctx.translate(this.x + this.w / 2, this.y + this.h / 2);
         ctx.rotate(angle);
         ctx.fillStyle = "black";
         ctx.fillRect(this.w / 2 - 5, -5, this.gun.length, 10);
         ctx.restore();
+
+        // 체력바
         ctx.fillStyle = "red";
         ctx.fillRect(this.x, this.y - 10, this.w, 5);
         ctx.fillStyle = "lime";
-        ctx.fillRect(this.x, this.y - 10, (this.w * this.hp) / 100, 5);
+        ctx.fillRect(this.x, this.y - 10, (this.w * this.hp) / 100, 5); // 🛑 [수정] 최대 체력 100 기준
+
+        // 스킬 쿨타임 또는 활성화 시각 효과
         const now = Date.now();
         const elapsed = now - this.lastSpecialAbilityTime;
         const remainingCooldown = Math.max(0, this.specialAbilityCooldown - elapsed);
+
         if (remainingCooldown > 0) {
             const ratio = remainingCooldown / this.specialAbilityCooldown;
-            ctx.fillStyle = `rgba(255, 0, 0, ${0.5 * ratio})`;
+            ctx.fillStyle = `rgba(255, 0, 0, ${0.5 * ratio})`; // 쿨타임 남은 비율만큼 붉게 표시
             ctx.fillRect(this.x, this.y, this.w, this.h);
-        } else if (this.isSpecialInvulnerable) {
+        } else if (this.isSpecialInvulnerable) { // 칼 무적
             ctx.fillStyle = "rgba(0, 255, 255, 0.5)";
             ctx.fillRect(this.x, this.y, this.w, this.h);
+        } else if (this.gun.specialAbility) { // 샷건 스킬 활성화
+             ctx.fillStyle = "rgba(255, 165, 0, 0.5)"; // 주황색으로 표시
+             ctx.fillRect(this.x, this.y, this.w, this.h);
         }
     }
 }
-
 // ========================== // 적(Enemy) 클래스 정의 // ==========================
 class Enemy extends BoxCollider {
     constructor(x, y, w, h, speed, hp) {
@@ -317,7 +389,8 @@ class Gun {
         this.fireRate = fireRate;
         this.lastShot = 0;
         this.damage = damage;
-        this.type = type
+        this.type = type;
+        this.SpecialAbility = false;
     }
     canShoot() {
         return Date.now() - this.lastShot >= this.fireRate;
@@ -330,10 +403,11 @@ class Gun {
         this.type === "knife" ? fw = 10 : fw = this.length / 2;
         const bx = x + Math.cos(angle) * 30;
         const by = y + Math.sin(angle) * 30;
-        if (this.type === "shotgun") {
-            let ba = angle - 0.2;
-            const endAngle = angle + 0.2;
-            const spreadStep = 0.1; 
+        if (this.type === "shotgun" || (this.type === "boomerang" && this.SpecialAbility)) {
+            const a = this.type === "shotgun" ? 0.2 : 0.1
+            let ba = angle - a;
+            const endAngle = angle + a;
+            const spreadStep = (this.SpecialAbility && this.type === "shotgun") ? 0.05 : 0.1; 
             while (ba < endAngle) {
                 // 🛑 [수정] 샷건 총알에도 데미지, life, fw, type 전달
                 bullets.push(new Bullet(bx, by, ba, this.bulletSpeed, this.damage, life, fw, this.type));
@@ -351,20 +425,20 @@ class Gun {
 class Bullet extends BoxCollider {
     // 🛑 [수정] 생성자에 'damage' 인자 추가
     constructor(x, y, angle, speed, damage, life = 5000, forward = 50, type = "normal") {
-        const size = (type === "rocket" || type === "traper" || type === "boomerang") ? 20 : 8;
+        const size = (type === "rocket" || type === "traper" || type === "boomerang" || type === "bomb") ? 20 : 8;
         super(x, y, size, size);
         this.x -= this.w / 2;
         this.y -= this.h / 2;
         this.angle = angle;
-        this.speed = speed;
+        this.speed = speed + (TickFreeze && type === "rocket" ? 10 : 0);
         this.damage = damage;         // 🛑 [추가] 총알의 현재 데미지
         this.baseDamage = damage;   // 🛑 [추가] 총알의 기본 데미지 (부메랑용)
         this.life = life;
-        this.birth = Date.now();
+        this.birth = 0
         this.dead = false;
         this.exploded = false;
         this.explosionTimer = 0;
-        this.accelTimer = 0;
+        this.accelTimer = (TickFreeze) ? 30 : 0;
         this.type = type;
         this.returnDamageApplied = false; // 🛑 [추가] 부메랑 데미지 증가 플래그
 
@@ -373,6 +447,8 @@ class Bullet extends BoxCollider {
 
         this.centerX = this.x + this.w / 2;
         this.centerY = this.y + this.h / 2;
+
+        this.vy = 0;
     }
     
     triggerExplosion() { 
@@ -387,7 +463,7 @@ class Bullet extends BoxCollider {
     }
 
     update(walls, enemies = []) { 
-        // ... (상단 폭발 로직은 수정 없음)
+        this.birth ++;
         if (this.dead) return;
 
         if (this.exploded) {
@@ -398,8 +474,8 @@ class Bullet extends BoxCollider {
                 return;
             }
 
-            this.w += (Math.abs(this.speed) / 3) + (30 / this.explosionTimer);
-            this.h += (Math.abs(this.speed) / 3) + (30 / this.explosionTimer);
+            this.w += (Math.abs(this.speed) / 3) + (30 / this.explosionTimer) + this.damage / 2;
+            this.h += (Math.abs(this.speed) / 3) + (30 / this.explosionTimer) + this.damage / 2;
             this.x = this.centerX - this.w / 2;
             this.y = this.centerY - this.h / 2;
 
@@ -418,8 +494,9 @@ class Bullet extends BoxCollider {
         }
         
         // ... (벽, 적, 화면 경계 충돌 로직은 수정 없음)
-        const nextX = this.x + Math.cos(this.angle) * this.speed;
-        const nextY = this.y + Math.sin(this.angle) * this.speed;
+        let nextX = this.x + Math.cos(this.angle) * this.speed;
+        let nextY = this.y + Math.sin(this.angle) * this.speed;
+        
         const testBox = { x: nextX, y: nextY, w: this.w, h: this.h };
 
         for (let w of walls) {
@@ -430,7 +507,7 @@ class Bullet extends BoxCollider {
                     testBox.y < w.y + w.h &&
                     testBox.y + testBox.h > w.y)
             ) {
-                if (this.type === "rocket" || this.type === "traper") {
+                if (this.type === "rocket" || this.type === "traper" || this.type === "bomb") {
                     this.triggerExplosion();
                 } else {
                     this.dead = true;
@@ -441,7 +518,7 @@ class Bullet extends BoxCollider {
 
         for (let e of enemies) {
             if (this.checkCollision(e)) {
-                if (this.type === "rocket" || this.type === "traper") {
+                if (this.type === "rocket" || this.type === "traper" || this.type === "bomb") {
                     this.triggerExplosion();
                     return;
                 } else if (this.type !== "railgun") {
@@ -452,7 +529,7 @@ class Bullet extends BoxCollider {
         }
 
         if (nextY + this.h >= SH || nextY <= 0 || nextX <= 0 || nextX + this.w >= SW) {
-            if (this.type === "rocket" || this.type === "traper") {
+            if (this.type === "rocket" || this.type === "traper" || this.type === "bomb") {
                 this.triggerExplosion();
             } else {
                 this.dead = true;
@@ -463,6 +540,10 @@ class Bullet extends BoxCollider {
         // 이동
         this.x = nextX;
         this.y = nextY;
+        if(this.type === "bomb"){
+            this.y += this.vy;
+            this.vy += 0.1;
+        }
         if(this.type === "rocket") {
             this.accelTimer ++;
             if(this.accelTimer >= 30) {
@@ -497,7 +578,7 @@ class Bullet extends BoxCollider {
             ctx.fillRect(this.x, this.y, this.w, this.h);
         } else {
             // 🛑 [수정] 부메랑이 돌아올 때 색상 변경 (선택 사항)
-            let color = (this.type === "rocket" || this.type === "traper") ? "red" : "orange";
+            let color = (this.type === "rocket" || this.type === "traper" || this.type === "bomb") ? "red" : "orange";
             if (this.type === "boomerang" && this.returnDamageApplied) {
                 color = "cyan"; // 돌아올 때 색상을 하늘색으로
             }
@@ -507,7 +588,7 @@ class Bullet extends BoxCollider {
     }
 
     isDead() {
-        return this.dead || (Date.now() - this.birth > this.life);
+        return this.dead || this.birth >= this.life;
     }
 }
 
@@ -603,6 +684,7 @@ const ENEMY_BASE_SPEED = 1.7;
 let totalEnemiesToSpawn = 0;
 let lastSpawnTime = 0;
 const SPAWN_INTERVAL = 500; 
+let TickFreeze = false;
 
 // ========================== // 적 생성 및 층 관리 함수 정의 // ==========================
 function selectGun(gunType) {
@@ -616,7 +698,7 @@ function selectGun(gunType) {
 
 function spawnEnemies() {
     enemies.length = 0;
-    totalEnemiesToSpawn = Math.min(5, Math.floor(currentFloor / 5) + 1);
+    totalEnemiesToSpawn = Math.floor(currentFloor / 5) + 1;
     lastSpawnTime = Date.now();
     if (player) { 
         player.x = 50;
@@ -633,9 +715,9 @@ function setupWalls() {
         new BoxCollider(0, 0, 40, SH),
         new BoxCollider(SW - 40, 0, 40, SH),
         new BoxCollider(100, SH - 500, 100, 50),
-        new BoxCollider(300, SH - 400, 100, 50),
-        new BoxCollider(500, SH - 300, 100, 50),
-        new BoxCollider(700, SH - 200, 100, 50),
+        new BoxCollider(200, SH - 400, 100, 50),
+        new BoxCollider(300, SH - 300, 100, 50),
+        new BoxCollider(400, SH - 200, 100, 50),
     ];
 }
 setupWalls();
@@ -846,7 +928,7 @@ function gameLoop() {
         player.gun.shoot(player.x + player.w / 2, player.y + player.h / 2, angle, bullets);
     }
 
-    if (totalEnemiesToSpawn > 0 && Date.now() - lastSpawnTime >= SPAWN_INTERVAL) {
+    if (totalEnemiesToSpawn > 0 && Date.now() - lastSpawnTime >= SPAWN_INTERVAL && !TickFreeze) {
         // ... (적 스폰)
         const enemyHp = ENEMY_BASE_HP + (currentFloor - 1) * 1.5;
         const enemySpeed = ENEMY_BASE_SPEED + (currentFloor - 1) * 0.01;
@@ -854,31 +936,34 @@ function gameLoop() {
         totalEnemiesToSpawn--;
         lastSpawnTime = Date.now();
     }
-    
-    for (let b of bullets) {
-        b.update(walls, enemies); 
+    if(!TickFreeze){
+        for (let b of bullets) {
+            b.update(walls, enemies); 
+        }
     }
 
-    const ENEMY_TOUCH_DAMAGE = 3;
-    for (let e of enemies) {
-        e.update(player, walls);
+    const ENEMY_TOUCH_DAMAGE = 1;
+    if(!TickFreeze){
+        for (let e of enemies) {
+            e.update(player, walls);
         
-        if (player.checkCollision(e)) {
-            player.takeDamage(ENEMY_TOUCH_DAMAGE);
-        }
+            if (player.checkCollision(e)) {
+                player.takeDamage(ENEMY_TOUCH_DAMAGE);
+            }
         
-        for (let j = bullets.length - 1; j >= 0; j--) {
-            const bullet = bullets[j];
-            if (bullet.dead || bullet.exploded) continue; 
+            for (let j = bullets.length - 1; j >= 0; j--) {
+                const bullet = bullets[j];
+                if (bullet.dead || bullet.exploded) continue; 
             
-            if (bullet.checkCollision(e)) {
-                if (bullet.type !== "rocket" && bullet.type !== "traper") {
-                    // 🛑 [수정] player.gun.damage 대신 bullet.damage 사용
-                    e.takeDamage(bullet.damage);
-                    if (bullet.type !== "railgun") {
-                        bullet.dead = true;
+                if (bullet.checkCollision(e)) {
+                    if (bullet.type !== "rocket" && bullet.type !== "traper" && bullet.type !== "bomb") {
+                        // 🛑 [수정] player.gun.damage 대신 bullet.damage 사용
+                        e.takeDamage(bullet.damage);
+                        if (bullet.type !== "railgun") {
+                            bullet.dead = true;
+                        }
+                        if(bullet.dead) break;
                     }
-                    if(bullet.dead) break;
                 }
             }
         }
