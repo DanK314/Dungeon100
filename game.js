@@ -149,7 +149,7 @@ class Player extends BoxCollider {
                 this.gun.fireRate /= FireRateMultiplier;
                 TickFreeze = false;
                 this.speed = this.defspeed; // 🛑 [수정] 시간 멈춤 해제 시 속도 원복
-            }, 3000);
+            }, 5000);
             console.log(`Special Ability Used: Healed +${healAmount} HP.`);
             return true; // 🛑 [수정] return true 추가
 
