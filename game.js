@@ -1107,7 +1107,7 @@ function gameLoop() {
         if (currentFloor >= 30 && Math.random() < 0.5) {
             const enemyGunSpec = GUN_SPECS['ENEMYGUN'];
             const enemyGun = new Gun(enemyGunSpec.bulletSpeed, enemyGunSpec.length, 1500, 5, enemyGunSpec.type);
-            enemies.push(new ShootingEnemy(spawnX, 100, 50, 50, enemySpeed * 0.6, enemyHp, enemyGun));
+            enemies.push(new ShootingEnemy(spawnX, 100, 50, 50, enemySpeed * 0.6, enemyHp*0.3, enemyGun));
         } else {
             enemies.push(new Enemy(spawnX, 100, 50, 50, enemySpeed, enemyHp));
         }
