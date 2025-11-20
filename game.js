@@ -15,8 +15,8 @@ window.onresize = function () {
 // 🛑 [추가] 풀스크린 요청 함수
 function requestGameFullscreen() {
     // 캔버스 자체가 아니라 <html> 페이지 전체를 풀스크린으로 만듭니다.
-    const elem = document.documentElement; 
-    
+    const elem = document.documentElement;
+
     if (elem.requestFullscreen) {
         elem.requestFullscreen();
     } else if (elem.webkitRequestFullscreen) { // Safari
@@ -108,8 +108,7 @@ class Player extends BoxCollider {
             this.hp += this.hp < 20 ? 30 : 0;
             this.gun.damage += 10;
             console.log(
-                `Special Ability Used: ${
-                    invulDuration / 1000
+                `Special Ability Used: ${invulDuration / 1000
                 } sec Invulnerability, Speed+5, Damage+10!`
             );
             return true;
@@ -361,35 +360,35 @@ class Enemy extends BoxCollider {
             }
         }
     }
-    
-    takeDamage(damage, isExplosion = false, explosionCenterX = null) { 
+
+    takeDamage(damage, isExplosion = false, explosionCenterX = null) {
         if (!player) return;
 
         const enemyCenterX = this.x + this.w / 2;
         let referenceX;
 
         if (isExplosion) {
-            referenceX = explosionCenterX; 
+            referenceX = explosionCenterX;
         } else {
-            referenceX = player.x + player.w / 2; 
+            referenceX = player.x + player.w / 2;
         }
-        
-        const knockbackMultiplier = isExplosion ? 50 : player.gun.type === "knife" ? 0 : 1; 
-        const knockbackForce = damage * 0.1 * knockbackMultiplier; 
+
+        const knockbackMultiplier = isExplosion ? 50 : player.gun.type === "knife" ? 0 : 1;
+        const knockbackForce = damage * 0.1 * knockbackMultiplier;
 
         this.hp -= damage;
 
         if (enemyCenterX < referenceX) {
-            this.x -= knockbackForce; 
+            this.x -= knockbackForce;
         } else if (enemyCenterX > referenceX) {
-            this.x += knockbackForce; 
+            this.x += knockbackForce;
         }
 
         if (this.hp <= 0) {
             this.dead = true;
         }
     }
-    
+
     draw() {
         if (this.dead) return;
 
@@ -575,13 +574,13 @@ class Bullet extends BoxCollider {
     ) {
         const size =
             type === "rocket" ||
-            type === "traper" ||
-            type === "boomerang" ||
-            type === "bomb"
+                type === "traper" ||
+                type === "boomerang" ||
+                type === "bomb"
                 ? 20
                 : type === "deathray"
-                ? 100
-                : 8;
+                    ? 100
+                    : 8;
         super(x, y, size, size);
         this.x -= this.w / 2;
         this.y -= this.h / 2;
@@ -664,7 +663,7 @@ class Bullet extends BoxCollider {
         }
 
         // 🛑 [제거] 총알-적 충돌 로직은 gameLoop로 이동했습니다.
-        
+
         if (
             nextY + this.h >= SH ||
             nextY <= 0 ||
@@ -717,12 +716,12 @@ class Bullet extends BoxCollider {
         } else {
             let color =
                 this.type === "rocket" ||
-                this.type === "traper" ||
-                this.type === "deathray"
+                    this.type === "traper" ||
+                    this.type === "deathray"
                     ? "red"
                     : this.type === "bomb"
-                    ? "#005500"
-                    : "orange";
+                        ? "#005500"
+                        : "orange";
 
             // 🛑 [수정] 부메랑 및 적 총알 색상 변경
             if (this.type === "boomerang" && this.returnDamageApplied) {
@@ -742,7 +741,7 @@ class Bullet extends BoxCollider {
     }
 }
 // ========================== // 게임 오브젝트 및 층 변수 // ==========================
-let gameState = 'start'; 
+let gameState = 'start';
 let player = null;
 // 🛑 [최적화] const -> let으로 변경 (Filter 적용 위함)
 let bullets = [];
@@ -829,7 +828,7 @@ const GUN_SPECS = {
         damage: 1,
         fireRate: 15000,
         bulletSpeed: 20,
-        length : 70,
+        length: 70,
         type: 'ENEMYGUN'
     }
 };
@@ -840,8 +839,9 @@ const ENEMY_BASE_HP = 40;
 const ENEMY_BASE_SPEED = 1.7;
 let totalEnemiesToSpawn = 0;
 let lastSpawnTime = 0;
-const SPAWN_INTERVAL = 500; 
+const SPAWN_INTERVAL = 500;
 let TickFreeze = false;
+let UsedDebugger = false;
 
 // ========================== // 적 생성 및 층 관리 함수 정의 // ==========================
 function selectGun(gunType) {
@@ -850,11 +850,11 @@ function selectGun(gunType) {
     const newGun = new Gun(spec.bulletSpeed, spec.length, spec.fireRate, spec.damage, spec.type);
     let speed = 5;
     if (spec.type === 'knife') speed = 7;
-    if(spec.type === 'traper') speed = 6;
-    if(spec.type === 'rocket') speed = 4;
-    if(spec.type === 'sniper') speed = 4;
-    if(spec.type === 'boomerang') speed = 7;
-    if(spec.type === 'railgun') speed = 4;
+    if (spec.type === 'traper') speed = 6;
+    if (spec.type === 'rocket') speed = 4;
+    if (spec.type === 'sniper') speed = 4;
+    if (spec.type === 'boomerang') speed = 7;
+    if (spec.type === 'railgun') speed = 4;
     player = new Player(50, 100, 40, 40, speed, newGun);
     gameState = 'playing';
     spawnEnemies();
@@ -864,7 +864,7 @@ function spawnEnemies() {
     enemies.length = 0;
     totalEnemiesToSpawn = Math.floor(currentFloor / 5) + 1;
     lastSpawnTime = Date.now();
-    if (player) { 
+    if (player) {
         player.x = 50;
         player.y = 100;
         player.vx = 0;
@@ -908,8 +908,8 @@ function drawGunSelection() {
     ctx.textAlign = "center";
     ctx.fillText("무기를 선택하세요", SW / 2, SH / 2 - 200);
     const gunTypes = ['PISTOL', 'SNIPER', 'SHOTGUN', 'RAILGUN', 'TRAPER', 'KNIFE', 'ROCKET', 'BOOMERANG'];
-    const padding = 20; 
-    const numGuns = gunTypes.length; 
+    const padding = 20;
+    const numGuns = gunTypes.length;
     const totalPadding = padding * (numGuns + 1);
     const boxWidth = (SW - totalPadding) / numGuns;
     const boxHeight = 250;
@@ -970,7 +970,7 @@ function drawGunSelection() {
                 bulletType = "일반 탄환";
                 break;
         }
-        ctx.fillText("탄환 종류:"+bulletType, x + 20, textY);
+        ctx.fillText("탄환 종류:" + bulletType, x + 20, textY);
         textY += 30;
         ctx.font = "8px Arial";
         ctx.fillStyle = "#ccc";
@@ -990,7 +990,7 @@ let mouseDown = false;
 window.addEventListener("keydown", (e) => (input[e.key] = true));
 window.addEventListener("keyup", (e) => {
     if (e.key === "w" || e.key === "ArrowUp") {
-        if (player) player.jumpLocked = false; 
+        if (player) player.jumpLocked = false;
     }
     input[e.key] = false;
 });
@@ -1033,7 +1033,7 @@ canvas.addEventListener("mouseup", (e) => {
     }
 });
 canvas.addEventListener("contextmenu", (e) => {
-    e.preventDefault(); 
+    e.preventDefault();
     if (player && gameState === 'playing') {
         if (player.useSpecialAbility()) {
         } else {
@@ -1045,6 +1045,8 @@ canvas.addEventListener("contextmenu", (e) => {
 
 // ========================== // 게임 루프 (수정된 충돌 로직) // ==========================
 function gameLoop() {
+    // 2초마다 개발자 도구가 열려있는지 검사
+
     ctx.clearRect(0, 0, SW, SH);
     if (TickFreeze) {
         ctx.fillStyle = "rgba(0, 0, 255, 0.2)";
@@ -1052,6 +1054,7 @@ function gameLoop() {
     }
 
     if (gameState === 'start') {
+        currentFloor = 1;
         drawStartScreen();
         requestAnimationFrame(gameLoop);
         return;
@@ -1064,6 +1067,9 @@ function gameLoop() {
     }
 
     if (currentFloor > MAX_FLOOR) {
+        if (UsedDebugger) {
+            currentFloor = 1;
+        }
         // ... (게임 클리어 로직 - 수정 없음)
         ctx.clearRect(0, 0, SW, SH);
         ctx.fillStyle = "#000";
@@ -1107,7 +1113,7 @@ function gameLoop() {
         if (currentFloor >= 30 && Math.random() < 0.5) {
             const enemyGunSpec = GUN_SPECS['ENEMYGUN'];
             const enemyGun = new Gun(enemyGunSpec.bulletSpeed, enemyGunSpec.length, 1500, 5, enemyGunSpec.type);
-            enemies.push(new ShootingEnemy(spawnX, 100, 50, 50, enemySpeed * 0.6, enemyHp*0.3, enemyGun));
+            enemies.push(new ShootingEnemy(spawnX, 100, 50, 50, enemySpeed * 0.6, enemyHp * 0.3, enemyGun));
         } else {
             enemies.push(new Enemy(spawnX, 100, 50, 50, enemySpeed, enemyHp));
         }
@@ -1147,7 +1153,7 @@ function gameLoop() {
             if (bullet.owner === "player") {
                 for (let e of enemies) {
                     if (bullet.checkCollision(e)) {
-                        
+
                         // 🛑 [수정] 폭발형 총알과 비폭발형 총알 로직 분리
                         if (bullet.type === "rocket" || bullet.type === "traper" || bullet.type === "bomb") {
                             // 폭발형 총알: 폭발을 트리거하고 루프 중단
@@ -1220,5 +1226,18 @@ function gameLoop() {
 
     requestAnimationFrame(gameLoop);
 }
+setInterval(() => {
+    const startTime = performance.now();
 
+    // 🛑 이 구문이 핵심입니다.
+    debugger;
+
+    const endTime = performance.now();
+
+    // (endTime - startTime)이 100ms보다 크면 콘솔이 열린 것으로 간주
+    if (endTime - startTime > 100) {
+        UsedDebugger = true;
+        console.warn("디버거가 감지되었습니다. (UsedDebugger = true)");
+    }
+}, 1500); // 2000ms = 2초
 gameLoop()
