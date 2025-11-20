@@ -510,7 +510,7 @@ class Gun {
         if (!this.canShoot()) return;
         let life;
         let fw;
-        this.type === "knife" ? (life = 100) : (life = 5000);
+        this.type === "knife" ? (life = 10) : (life = 5000);
         this.type === "knife" ? (fw = 10) : (fw = this.length / 2);
         const bx = x + Math.cos(angle) * 30;
         const by = y + Math.sin(angle) * 30;
