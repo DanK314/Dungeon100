@@ -77,7 +77,7 @@ class Player extends BoxCollider {
         this.jumpLocked = false;
         this.isSpecialInvulnerable = false;
         this.specialInvulnerabilityTime = 0;
-        this.specialAbilityCooldown = 30000;
+        this.specialAbilityCooldown = 20000;
         this.lastSpecialAbilityTime = 0;
     }
     applyGravity(gravity) {
@@ -114,7 +114,7 @@ class Player extends BoxCollider {
             );
             return true;
         } else if (this.gun.type === "traper") {
-            const healAmount = 30;
+            const healAmount = 50;
             this.hp += healAmount;
             this.hp = this.hp > 100 ? 100 : this.hp;
             const FireRateMultiplier = 0.1;
@@ -127,7 +127,7 @@ class Player extends BoxCollider {
             return true;
             // 🛑 [추가] 샷건 스킬 로직
         } else if (this.gun.type === "shotgun") {
-            const healAmount = 10;
+            const healAmount = 30;
             this.hp += healAmount;
             this.hp = this.hp > 100 ? 100 : this.hp;
             this.gun.SpecialAbility = true; // Gun 클래스의 플래그 활성화
@@ -138,7 +138,7 @@ class Player extends BoxCollider {
             console.log(`Special Ability Used: Shotgun spread doubled for 10 sec!`);
             return true;
         } else if (this.gun.type === "rocket") {
-            const healAmount = 10;
+            const healAmount = 30;
             this.hp += healAmount;
             this.hp = this.hp > 100 ? 100 : this.hp;
             const FireRateMultiplier = 0.1;
@@ -154,7 +154,7 @@ class Player extends BoxCollider {
             console.log(`Special Ability Used: Healed +${healAmount} HP.`);
             return true; // 🛑 [수정] return true 추가
         } else if (this.gun.type === "sniper") {
-            const healAmount = 50;
+            const healAmount = 70;
             this.hp += healAmount;
             this.hp = this.hp > 100 ? 100 : this.hp;
             const originalReload = this.gun.fireRate;
@@ -167,7 +167,7 @@ class Player extends BoxCollider {
             console.log(`Special Ability Used: Healed +${healAmount} HP.`);
             return true;
         } else if (this.gun.type === "revolver") {
-            const healAmount = 30;
+            const healAmount = 50;
             this.hp += healAmount;
             this.hp = this.hp > 100 ? 100 : this.hp;
             this.lastSpecialAbilityTime = now;
@@ -182,7 +182,7 @@ class Player extends BoxCollider {
             console.log(`Special Ability Used: Healed +${healAmount} HP.`);
             return true;
         } else if (this.gun.type === "boomerang") {
-            const healAmount = 20;
+            const healAmount = 40;
             this.hp += healAmount;
             this.hp = this.hp > 100 ? 100 : this.hp;
             this.gun.SpecialAbility = true; // Gun 클래스의 플래그 활성화
@@ -193,7 +193,7 @@ class Player extends BoxCollider {
             console.log(`Special Ability Used: boomerang count doubled for 10 sec!`);
             return true;
         } else if (this.gun.type === "railgun") {
-            const healAmount = 30;
+            const healAmount = 50;
             this.hp += healAmount;
             this.hp = this.hp > 100 ? 100 : this.hp;
             this.lastSpecialAbilityTime = now;
@@ -213,7 +213,7 @@ class Player extends BoxCollider {
             console.log(`Special Ability Used: Healed +${healAmount} HP.`);
             return true;
         } else {
-            const healAmount = 30;
+            const healAmount = 50;
             this.hp += healAmount;
             this.hp = this.hp > 100 ? 100 : this.hp;
             this.lastSpecialAbilityTime = now;
@@ -827,7 +827,7 @@ const GUN_SPECS = {
         name_kr: '적의 총',
         desc_kr: '너가 이걸 보고있다면 난 망했어',
         damage: 1,
-        fireRate: 5000,
+        fireRate: 15000,
         bulletSpeed: 20,
         length : 70,
         type: 'ENEMYGUN'
