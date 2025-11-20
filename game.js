@@ -799,7 +799,7 @@ const GUN_SPECS = {
     'KNIFE': {
         name_kr: '칼',
         desc_kr: '극단적인 공격력, 극단적인 사거리',
-        damage: 10, // (프레임당 데미지)
+        damage: 3, // (프레임당 데미지)
         fireRate: 1, // 0.001초 (지속 발사)
         bulletSpeed: 0, // (근접)
         length: 50,
