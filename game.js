@@ -374,7 +374,7 @@ class Enemy extends BoxCollider {
             referenceX = player.x + player.w / 2; 
         }
         
-        const knockbackMultiplier = isExplosion ? 50 : 1; 
+        const knockbackMultiplier = isExplosion ? 50 : player.gun.type === "knife" ? 0 : 1; 
         const knockbackForce = damage * 0.1 * knockbackMultiplier; 
 
         this.hp -= damage;
