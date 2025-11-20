@@ -61,20 +61,18 @@ class BoxCollider {
     }
 }
 
-// ==========================
-// 플레이어 클래스
-// ==========================
+// ========================== // 플레이어 클래스 // ==========================
 class Player extends BoxCollider {
     constructor(x, y, w, h, speed, gun) {
         super(x, y, w, h);
         this.speed = speed;
         this.defspeed = speed;
-        this.hp = gun.type === 'knife' ? 25 : 100;
+        this.hp = gun.type === "knife" ? 25 : 100;
         this.gun = gun;
         this.onGround = false;
         this.isInvulnerable = false;
         this.invulnerabilityTime = 0;
-        this.maxJumps = this.gun.type === 'knife' ? 4 : 3;
+        this.maxJumps = this.gun.type === "knife" ? 4 : 3;
         this.jumpCount = 0;
         this.jumpLocked = false;
         this.isSpecialInvulnerable = false;
@@ -82,22 +80,26 @@ class Player extends BoxCollider {
         this.specialAbilityCooldown = 30000;
         this.lastSpecialAbilityTime = 0;
     }
-
     applyGravity(gravity) {
         this.vy += gravity;
         if (this.vy > 15) this.vy = 15;
     }
-
     useSpecialAbility() {
         const now = Date.now();
         // 🛑 [수정] 쿨타임 체크를 맨 위로 이동
         if (now - this.lastSpecialAbilityTime < this.specialAbilityCooldown) {
-            const remaining = Math.max(0, this.specialAbilityCooldown - (Date.now() - this.lastSpecialAbilityTime));
-            console.log(`Special Ability on cooldown. Remaining: ${(remaining / 1000).toFixed(2)}s`);
+            const remaining = Math.max(
+                0,
+                this.specialAbilityCooldown - (Date.now() - this.lastSpecialAbilityTime)
+            );
+            console.log(
+                `Special Ability on cooldown. Remaining: ${(remaining / 1000).toFixed(
+                    2
+                )}s`
+            );
             return false;
         }
-
-        if (this.gun.type === 'knife') {
+        if (this.gun.type === "knife") {
             this.isSpecialInvulnerable = true;
             const invulDuration = 10000;
             this.specialInvulnerabilityTime = now + invulDuration;
@@ -105,10 +107,13 @@ class Player extends BoxCollider {
             this.speed += 5;
             this.hp += this.hp < 20 ? 30 : 0;
             this.gun.damage += 10;
-            console.log(`Special Ability Used: ${invulDuration / 1000} sec Invulnerability, Speed+5, Damage+10!`);
+            console.log(
+                `Special Ability Used: ${
+                    invulDuration / 1000
+                } sec Invulnerability, Speed+5, Damage+10!`
+            );
             return true;
-
-        } else if (this.gun.type === 'traper') {
+        } else if (this.gun.type === "traper") {
             const healAmount = 30;
             this.hp += healAmount;
             this.hp = this.hp > 100 ? 100 : this.hp;
@@ -120,23 +125,19 @@ class Player extends BoxCollider {
             }, 10000);
             console.log(`Special Ability Used: Healed +${healAmount} HP.`);
             return true;
-        
-        // 🛑 [추가] 샷건 스킬 로직
-        } else if (this.gun.type === 'shotgun') {
+            // 🛑 [추가] 샷건 스킬 로직
+        } else if (this.gun.type === "shotgun") {
             const healAmount = 10;
             this.hp += healAmount;
             this.hp = this.hp > 100 ? 100 : this.hp;
             this.gun.SpecialAbility = true; // Gun 클래스의 플래그 활성화
             this.lastSpecialAbilityTime = now;
-
             setTimeout(() => {
                 this.gun.SpecialAbility = false; // 10초 뒤 비활성화
-            }, 10000); 
-
+            }, 10000);
             console.log(`Special Ability Used: Shotgun spread doubled for 10 sec!`);
             return true;
-
-        } else if (this.gun.type === 'rocket') {
+        } else if (this.gun.type === "rocket") {
             const healAmount = 10;
             this.hp += healAmount;
             this.hp = this.hp > 100 ? 100 : this.hp;
@@ -144,7 +145,7 @@ class Player extends BoxCollider {
             this.gun.fireRate *= FireRateMultiplier;
             this.lastSpecialAbilityTime = now;
             TickFreeze = true;
-            this.speed = 10; // 🛑 [수정] 시간 멈춤 시 속도 증가 
+            this.speed = 10; // 🛑 [수정] 시간 멈춤 시 속도 증가
             setTimeout(() => {
                 this.gun.fireRate /= FireRateMultiplier;
                 TickFreeze = false;
@@ -152,8 +153,7 @@ class Player extends BoxCollider {
             }, 5000);
             console.log(`Special Ability Used: Healed +${healAmount} HP.`);
             return true; // 🛑 [수정] return true 추가
-
-        } else if (this.gun.type === 'sniper') {
+        } else if (this.gun.type === "sniper") {
             const healAmount = 50;
             this.hp += healAmount;
             this.hp = this.hp > 100 ? 100 : this.hp;
@@ -166,44 +166,53 @@ class Player extends BoxCollider {
             this.lastSpecialAbilityTime = now;
             console.log(`Special Ability Used: Healed +${healAmount} HP.`);
             return true;
-
-        } else if(this.gun.type === 'revolver') {
+        } else if (this.gun.type === "revolver") {
             const healAmount = 30;
             this.hp += healAmount;
             this.hp = this.hp > 100 ? 100 : this.hp;
             this.lastSpecialAbilityTime = now;
-            const angle = Math.atan2(mouseY - (this.y + this.h / 2), mouseX - (this.x + this.w / 2)); // 🛑 [수정] player -> this
-            bullets.push(new Bullet(this.x, this.y, angle, 15, 30, 10000, 0, "bomb"));
+            const angle = Math.atan2(
+                mouseY - (this.y + this.h / 2),
+                mouseX - (this.x + this.w / 2)
+            );
+            // 🛑 [수정] "player" owner 추가
+            bullets.push(
+                new Bullet(this.x, this.y, angle, 15, 30, 10000, 0, "bomb", "player")
+            );
             console.log(`Special Ability Used: Healed +${healAmount} HP.`);
             return true;
-        
-        } else if (this.gun.type === 'boomerang') {
+        } else if (this.gun.type === "boomerang") {
             const healAmount = 20;
             this.hp += healAmount;
             this.hp = this.hp > 100 ? 100 : this.hp;
             this.gun.SpecialAbility = true; // Gun 클래스의 플래그 활성화
             this.lastSpecialAbilityTime = now;
-
             setTimeout(() => {
                 this.gun.SpecialAbility = false; // 10초 뒤 비활성화
-            }, 10000); 
-
+            }, 10000);
             console.log(`Special Ability Used: boomerang count doubled for 10 sec!`);
             return true;
-        } else if(this.gun.type === 'railgun') {
+        } else if (this.gun.type === "railgun") {
             const healAmount = 30;
             this.hp += healAmount;
             this.hp = this.hp > 100 ? 100 : this.hp;
             this.lastSpecialAbilityTime = now;
-            const angle = Math.atan2(mouseY - (this.y + this.h / 2), mouseX - (this.x + this.w / 2)); // 🛑 [수정] player -> this
-            for(let i = -2; i <= 100; i++) {
-                setTimeout(()=>{
-                    bullets.push(new Bullet(this.x, this.y, angle, 50, 100, 100, 50, "deathray"));
+            const angle = Math.atan2(
+                mouseY - (this.y + this.h / 2),
+                mouseX - (this.x + this.w / 2)
+            );
+            // 🛑 [수정] player -> this
+            for (let i = -2; i <= 100; i++) {
+                setTimeout(() => {
+                    // 🛑 [수정] "player" owner 추가
+                    bullets.push(
+                        new Bullet(this.x, this.y, angle, 50, 100, 100, 50, "deathray", "player")
+                    );
                 }, i * 5);
             }
             console.log(`Special Ability Used: Healed +${healAmount} HP.`);
             return true;
-        } else { 
+        } else {
             const healAmount = 30;
             this.hp += healAmount;
             this.hp = this.hp > 100 ? 100 : this.hp;
@@ -212,75 +221,69 @@ class Player extends BoxCollider {
             return true;
         }
     }
-
     takeDamage(damage) {
-        if (this.hp <= 0 || this.isInvulnerable || this.isSpecialInvulnerable) return;
+        if (this.hp <= 0 || this.isInvulnerable || this.isSpecialInvulnerable)
+            return;
         this.hp -= damage;
         if (this.hp < 0) this.hp = 0;
         this.isInvulnerable = true;
-        this.invulnerabilityTime = Date.now() + (this.gun.type == 'knife' ? 1000 : 300);
+        this.invulnerabilityTime =
+            Date.now() + (this.gun.type == "knife" ? 1000 : 300);
         if (this.hp === 0) {
             console.log("Player Died!");
         }
     }
-
     update(input, walls) {
         if (this.hp <= 0) return;
-
         if (this.isSpecialInvulnerable && Date.now() > this.specialInvulnerabilityTime) {
             this.isSpecialInvulnerable = false;
             // 🛑 [수정] 칼 스킬 종료 시 스탯 원복 (defspeed 사용)
-            if (this.gun.type === 'knife') { 
+            if (this.gun.type === "knife") {
                 this.speed = this.defspeed;
                 this.gun.damage -= 10;
             }
             console.log("Special Ability Ended.");
         }
-
         if (this.isInvulnerable && Date.now() > this.invulnerabilityTime) {
             this.isInvulnerable = false;
         }
-
         this.vx = 0;
         if (input["a"] || input["ArrowLeft"]) this.vx = -this.speed;
         if (input["d"] || input["ArrowRight"]) this.vx = this.speed;
-
-        if ((input["w"] || input["ArrowUp"])) {
+        if (input["w"] || input["ArrowUp"]) {
             if (this.jumpCount < this.maxJumps && !this.jumpLocked) {
                 this.vy = -12;
                 this.jumpCount++;
                 this.jumpLocked = true;
             }
         }
-
         this.applyGravity(0.6);
         this.x += this.vx;
         this.y += this.vy;
-
         this.onGround = false;
         for (let w of walls) {
             if (this.checkCollision(w)) {
                 this.resolveCollision(w);
-                if (this.y + this.h <= w.y + 10) { // 땅에 닿았는지 체크
+                if (this.y + this.h <= w.y + 10) {
+                    // 땅에 닿았는지 체크
                     this.onGround = true;
                     this.jumpCount = 0;
                 }
             }
         }
     }
-
     draw(mouseX, mouseY) {
-        const angle = Math.atan2(mouseY - (this.y + this.h / 2), mouseX - (this.x + this.w / 2));
+        const angle = Math.atan2(
+            mouseY - (this.y + this.h / 2),
+            mouseX - (this.x + this.w / 2)
+        );
         const isInvul = this.isInvulnerable || this.isSpecialInvulnerable;
-        
         // 무적 시 깜빡임
         if (isInvul && Date.now() % 100 < 50) {
-            return; 
+            return;
         }
-
         ctx.fillStyle = "#44aaff";
         ctx.fillRect(this.x, this.y, this.w, this.h);
-
         // 총구 그리기
         ctx.save();
         ctx.translate(this.x + this.w / 2, this.y + this.h / 2);
@@ -288,28 +291,30 @@ class Player extends BoxCollider {
         ctx.fillStyle = "black";
         ctx.fillRect(this.w / 2 - 5, -5, this.gun.length, 10);
         ctx.restore();
-
         // 체력바
         ctx.fillStyle = "red";
         ctx.fillRect(this.x, this.y - 10, this.w, 5);
         ctx.fillStyle = "lime";
         ctx.fillRect(this.x, this.y - 10, (this.w * this.hp) / 100, 5); // 🛑 [수정] 최대 체력 100 기준
-
         // 스킬 쿨타임 또는 활성화 시각 효과
         const now = Date.now();
         const elapsed = now - this.lastSpecialAbilityTime;
-        const remainingCooldown = Math.max(0, this.specialAbilityCooldown - elapsed);
-
+        const remainingCooldown = Math.max(
+            0,
+            this.specialAbilityCooldown - elapsed
+        );
         if (remainingCooldown > 0) {
             const ratio = remainingCooldown / this.specialAbilityCooldown;
             ctx.fillStyle = `rgba(255, 0, 0, ${0.5 * ratio})`; // 쿨타임 남은 비율만큼 붉게 표시
             ctx.fillRect(this.x, this.y, this.w, this.h);
-        } else if (this.isSpecialInvulnerable) { // 칼 무적
+        } else if (this.isSpecialInvulnerable) {
+            // 칼 무적
             ctx.fillStyle = "rgba(0, 255, 255, 0.5)";
             ctx.fillRect(this.x, this.y, this.w, this.h);
-        } else if (this.gun.specialAbility) { // 샷건 스킬 활성화
-             ctx.fillStyle = "rgba(255, 165, 0, 0.5)"; // 주황색으로 표시
-             ctx.fillRect(this.x, this.y, this.w, this.h);
+        } else if (this.gun.specialAbility) {
+            // 샷건 스킬 활성화
+            ctx.fillStyle = "rgba(255, 165, 0, 0.5)"; // 주황색으로 표시
+            ctx.fillRect(this.x, this.y, this.w, this.h);
         }
     }
 }
@@ -401,8 +406,91 @@ class Enemy extends BoxCollider {
         ctx.fillRect(this.x, this.y - 10, (this.w * this.hp) / this.baseHp, 5);
     }
 }
+// ==========================
+// 🛑 슈팅 적(ShootingEnemy) 클래스 (신규 추가)
+// ==========================
+class ShootingEnemy extends Enemy {
+    constructor(x, y, w, h, speed, hp, gun) {
+        super(x, y, w, h, speed, hp);
+        this.gun = gun;
+    }
 
-// ========================== // 총, 탄환 클래스 // ==========================
+    // Enemy의 update 메서드를 오버라이드(재정의)합니다.
+    update(player, walls, bullets) { // 🛑 bullets 배열을 인자로 받습니다.
+        if (this.dead) return;
+
+        // 1. Enemy의 움직임 및 중력 로직 (일부 수정)
+        this.vx = 0;
+        const center_x = this.x + this.w / 2;
+        const player_center_x = player.x + player.w / 2;
+        const dist_x = Math.abs(center_x - player_center_x);
+
+        // 🛑 수정: 플레이어와 일정 거리(예: 300px)를 유지
+        const maintainDistance = 300;
+        if (dist_x > maintainDistance + 50) { // 너무 멀면 접근
+            if (center_x < player_center_x) this.vx = this.speed;
+            else if (center_x > player_center_x) this.vx = -this.speed;
+        } else if (dist_x < maintainDistance - 50) { // 너무 가까우면 후퇴
+            if (center_x < player_center_x) this.vx = -this.speed * 0.5;
+            else if (center_x > player_center_x) this.vx = this.speed * 0.5;
+        }
+
+        // Y축 점프 로직 (기존과 동일)
+        const center_y = this.y + this.h / 2;
+        const player_center_y = player.y + player.h / 2;
+        if (this.onGround && center_y > player_center_y - 100) { // 플레이어가 약간 위에 있으면 점프
+            this.vy = -15;
+            this.onGround = false;
+        }
+
+        this.applyGravity(0.6);
+        this.x += this.vx;
+        this.y += this.vy;
+
+        this.onGround = false;
+        for (let w of walls) {
+            if (this.checkCollision(w)) {
+                this.resolveCollision(w);
+                if (this.y + this.h <= w.y + 10) {
+                    this.onGround = true;
+                }
+            }
+        }
+
+        // 2. 슈팅 로직 추가
+        if (this.gun.canShoot() && !TickFreeze) {
+            // 플레이어를 향하는 각도 계산
+            const angle = Math.atan2(
+                (player.y + player.h / 2) - (this.y + this.h / 2),
+                (player.x + player.w / 2) - (this.x + this.w / 2)
+            );
+
+            // "enemy" 소유자로 총알 발사
+            this.gun.shoot(this.x + this.w / 2, this.y + this.h / 2, angle, bullets, "enemy");
+        }
+    }
+
+    // 🛑 슈팅 적은 총도 그려줍니다.
+    draw() {
+        super.draw(); // 부모(Enemy)의 draw (몸통, 체력바) 호출
+        if (this.dead) return;
+        if (!player) return; // 플레이어가 없으면 그리지 않음
+
+        const angle = Math.atan2(
+            (player.y + player.h / 2) - (this.y + this.h / 2),
+            (player.x + player.w / 2) - (this.x + this.w / 2)
+        );
+
+        // 총구 그리기 (플레이어 draw 코드 참고)
+        ctx.save();
+        ctx.translate(this.x + this.w / 2, this.y + this.h / 2);
+        ctx.rotate(angle);
+        ctx.fillStyle = "black";
+        ctx.fillRect(this.w / 2 - 5, -5, this.gun.length, 10);
+        ctx.restore();
+    }
+}
+// ========================== // 총 클래스 (수정) // ==========================
 class Gun {
     constructor(bulletSpeed, length, fireRate, damage, type = "revolver") {
         this.bulletSpeed = bulletSpeed;
@@ -416,64 +504,108 @@ class Gun {
     canShoot() {
         return Date.now() - this.lastShot >= this.fireRate;
     }
-    shoot(x, y, angle, bullets) {
+
+    // 🛑 [수정] shoot 메서드에 owner 매개변수 추가 (기본값 "player")
+    shoot(x, y, angle, bullets, owner = "player") {
         if (!this.canShoot()) return;
         let life;
-        let fw
-        this.type === "knife" ? life = 100 : life = 5000;
-        this.type === "knife" ? fw = 10 : fw = this.length / 2;
+        let fw;
+        this.type === "knife" ? (life = 100) : (life = 5000);
+        this.type === "knife" ? (fw = 10) : (fw = this.length / 2);
         const bx = x + Math.cos(angle) * 30;
         const by = y + Math.sin(angle) * 30;
-        if (this.type === "shotgun" || (this.type === "boomerang" && this.SpecialAbility)) {
-            const a = this.type === "shotgun" ? 0.2 : 0.1
+        if (
+            this.type === "shotgun" ||
+            (this.type === "boomerang" && this.SpecialAbility)
+        ) {
+            const a = this.type === "shotgun" ? 0.2 : 0.1;
             let ba = angle - a;
             const endAngle = angle + a;
-            const spreadStep = (this.SpecialAbility && this.type === "shotgun") ? 0.05 : 0.1; 
+            const spreadStep =
+                this.SpecialAbility && this.type === "shotgun" ? 0.05 : 0.1;
             while (ba < endAngle) {
-                // 🛑 [수정] 샷건 총알에도 데미지, life, fw, type 전달
-                bullets.push(new Bullet(bx, by, ba, this.bulletSpeed, this.damage, life, fw, this.type));
-                ba += spreadStep
+                // 🛑 [수정] 샷건 총알에 owner 전달
+                bullets.push(
+                    new Bullet(
+                        bx,
+                        by,
+                        ba,
+                        this.bulletSpeed,
+                        this.damage,
+                        life,
+                        fw,
+                        this.type,
+                        owner // 🛑 owner 전달
+                    )
+                );
+                ba += spreadStep;
             }
         } else {
-            // 🛑 [수정] 총알 생성자에 this.damage 전달 (새로운 5번째 인자)
-            bullets.push(new Bullet(bx, by, angle, this.bulletSpeed, this.damage, life, fw, this.type));
+            // 🛑 [수정] 일반 총알에 owner 전달
+            bullets.push(
+                new Bullet(
+                    bx,
+                    by,
+                    angle,
+                    this.bulletSpeed,
+                    this.damage,
+                    life,
+                    fw,
+                    this.type,
+                    owner // 🛑 owner 전달
+                )
+            );
         }
         this.lastShot = Date.now();
     }
 }
-
-// ========================== // Bullet 클래스 (지속 데미지 로켓) // ==========================
+// ========================== // Bullet 클래스 (수정) // ==========================
 class Bullet extends BoxCollider {
-    // 🛑 [수정] 생성자에 'damage' 인자 추가
-    constructor(x, y, angle, speed, damage, life = 5000, forward = 50, type = "normal") {
-        const size = (type === "rocket" || type === "traper" || type === "boomerang" || type === "bomb") ? 20 : (type === "deathray")? 100 : 8;
+    // 🛑 [수정] 생성자 맨 뒤에 'owner' 인자 추가
+    constructor(
+        x,
+        y,
+        angle,
+        speed,
+        damage,
+        life = 5000,
+        forward = 50,
+        type = "normal",
+        owner = "player" // 🛑 owner 추가
+    ) {
+        const size =
+            type === "rocket" ||
+            type === "traper" ||
+            type === "boomerang" ||
+            type === "bomb"
+                ? 20
+                : type === "deathray"
+                ? 100
+                : 8;
         super(x, y, size, size);
         this.x -= this.w / 2;
         this.y -= this.h / 2;
         this.angle = angle;
         this.speed = speed + (TickFreeze && type === "rocket" ? 10 : 0);
-        this.damage = damage;         // 🛑 [추가] 총알의 현재 데미지
-        this.baseDamage = damage;   // 🛑 [추가] 총알의 기본 데미지 (부메랑용)
+        this.damage = damage;
+        this.baseDamage = damage;
         this.life = life;
-        this.birth = 0
+        this.birth = 0;
         this.dead = false;
         this.exploded = false;
         this.explosionTimer = 0;
-        this.accelTimer = (TickFreeze) ? 30 : 0;
+        this.accelTimer = TickFreeze ? 30 : 0;
         this.type = type;
-        this.returnDamageApplied = false; // 🛑 [추가] 부메랑 데미지 증가 플래그
-
+        this.owner = owner; // 🛑 [추가] 총알 소유자 (player 또는 enemy)
+        this.returnDamageApplied = false;
         this.x += Math.cos(this.angle) * forward;
         this.y += Math.sin(this.angle) * forward;
-
         this.centerX = this.x + this.w / 2;
         this.centerY = this.y + this.h / 2;
-
         this.vy = 0;
     }
-    
-    triggerExplosion() { 
-        // ... (이 메서드는 수정 없음)
+
+    triggerExplosion() {
         if (this.exploded) return;
         this.exploded = true;
         this.explosionTimer = 0;
@@ -483,42 +615,38 @@ class Bullet extends BoxCollider {
         this.h = 40;
     }
 
-    update(walls, enemies = []) { 
-        this.birth ++;
+    update(walls, enemies = []) {
+        this.birth++;
         if (this.dead) return;
-
         if (this.exploded) {
             this.explosionTimer++;
-            
             if (this.explosionTimer >= 30) {
                 this.dead = true;
                 return;
             }
-
-            this.w += (Math.abs(this.speed) / 3) + (30 / this.explosionTimer) + this.damage / 2;
-            this.h += (Math.abs(this.speed) / 3) + (30 / this.explosionTimer) + this.damage / 2;
+            this.w +=
+                Math.abs(this.speed) / 3 + 30 / this.explosionTimer + this.damage / 2;
+            this.h +=
+                Math.abs(this.speed) / 3 + 30 / this.explosionTimer + this.damage / 2;
             this.x = this.centerX - this.w / 2;
             this.y = this.centerY - this.h / 2;
-
-            const yellowPhaseDuration = 15; 
+            const yellowPhaseDuration = 15;
             if (this.explosionTimer < yellowPhaseDuration) {
-                
-                // 🛑 [수정] player.gun.damage 대신 this.damage 사용
-                const ROCKET_DOT_DAMAGE = this.damage; 
-                for (let e of enemies) {
-                    if (this.checkCollision(e)) {
-                        e.takeDamage(ROCKET_DOT_DAMAGE, true, this.centerX);
+                const ROCKET_DOT_DAMAGE = this.damage;
+                // 🛑 [수정] 폭발은 '플레이어'가 쏜 것만 적에게 데미지를 줌
+                if (this.owner === "player") {
+                    for (let e of enemies) {
+                        if (this.checkCollision(e)) {
+                            e.takeDamage(ROCKET_DOT_DAMAGE, true, this.centerX);
+                        }
                     }
                 }
             }
         }
-        
-        // ... (벽, 적, 화면 경계 충돌 로직은 수정 없음)
+
         let nextX = this.x + Math.cos(this.angle) * this.speed;
         let nextY = this.y + Math.sin(this.angle) * this.speed;
-        
         const testBox = { x: nextX, y: nextY, w: this.w, h: this.h };
-
         for (let w of walls) {
             if (
                 this.checkCollision(w) ||
@@ -529,77 +657,81 @@ class Bullet extends BoxCollider {
             ) {
                 if (this.type === "rocket" || this.type === "traper" || this.type === "bomb") {
                     this.triggerExplosion();
-                } else if(this.type !== "railgun" && this.type !== "deathray") {
-                    this.dead = true;
-                }
-            }
-        }
-
-        for (let e of enemies) {
-            if (this.checkCollision(e)) {
-                if (this.type === "rocket" || this.type === "traper" || this.type === "bomb") {
-                    this.triggerExplosion();
-                    return;
                 } else if (this.type !== "railgun" && this.type !== "deathray") {
                     this.dead = true;
-                    return;
                 }
             }
         }
 
-        if (nextY + this.h >= SH || nextY <= 0 || nextX <= 0 || nextX + this.w >= SW) {
+        // 🛑 [제거] 총알-적 충돌 로직은 gameLoop로 이동했습니다.
+        
+        if (
+            nextY + this.h >= SH ||
+            nextY <= 0 ||
+            nextX <= 0 ||
+            nextX + this.w >= SW
+        ) {
             if (this.type === "rocket" || this.type === "traper" || this.type === "bomb") {
                 this.triggerExplosion();
-            } else if(this.type !== "railgun" && this.type !== "deathray") {
+            } else if (this.type !== "railgun" && this.type !== "deathray") {
                 this.dead = true;
             }
         }
-
         // 이동
         this.x = nextX;
         this.y = nextY;
-        if(this.type === "bomb"){
+        if (this.type === "bomb") {
             this.y += this.vy;
             this.vy += 0.1;
         }
-        if(this.type === "rocket") {
-            this.accelTimer ++;
-            if(this.accelTimer >= 30) {
+        if (this.type === "rocket") {
+            this.accelTimer++;
+            if (this.accelTimer >= 30) {
                 this.speed += 0.5;
             }
         }
-
-        // 🛑 [수정] 부메랑 데미지 증가 로직
-        if(this.type === "boomerang") {
+        if (this.type === "boomerang") {
             this.speed -= 0.3;
-            this.vy += 1; // (기존 로직 유지)
-            
-            // speed가 0보다 작아지고(돌아올 때), 아직 데미지 증가가 적용되지 않았다면
-            if(this.speed <= 0 && !this.returnDamageApplied) {
-                this.damage = this.baseDamage * 3; // 데미지를 3배로 증가 (혹은 this.damage += 15 등으로 수정 가능)
-                this.returnDamageApplied = true; // 플래그 설정 (증가가 한 번만 일어나도록)
+            this.vy += 1;
+            if (this.speed <= 0 && !this.returnDamageApplied) {
+                this.damage = this.baseDamage * 3;
+                this.returnDamageApplied = true;
             }
         }
     }
 
     draw() {
-        // ... (이 메서드는 수정 없음)
         if (this.dead) return;
-        
-        if (this.x + this.w < 0 || this.x > SW || this.y + this.h < 0 || this.y > SH) {
+        if (
+            this.x + this.w < 0 ||
+            this.x > SW ||
+            this.y + this.h < 0 ||
+            this.y > SH
+        ) {
             return;
         }
-        
         if (this.exploded) {
             const fade = 1 - this.explosionTimer / 30;
-            ctx.fillStyle = `rgba(255, ${Math.floor(200 * fade)}, 0, ${fade})`; 
+            ctx.fillStyle = `rgba(255, ${Math.floor(200 * fade)}, 0, ${fade})`;
             ctx.fillRect(this.x, this.y, this.w, this.h);
         } else {
-            // 🛑 [수정] 부메랑이 돌아올 때 색상 변경 (선택 사항)
-            let color = (this.type === "rocket" || this.type === "traper" || this.type === "deathray") ? "red" : this.type === "bomb" ? "#005500" : "orange";
+            let color =
+                this.type === "rocket" ||
+                this.type === "traper" ||
+                this.type === "deathray"
+                    ? "red"
+                    : this.type === "bomb"
+                    ? "#005500"
+                    : "orange";
+
+            // 🛑 [수정] 부메랑 및 적 총알 색상 변경
             if (this.type === "boomerang" && this.returnDamageApplied) {
                 color = "cyan"; // 돌아올 때 색상을 하늘색으로
             }
+            if (this.owner === "enemy") {
+                color = "magenta"; // 🛑 적 총알 색상
+            }
+
             ctx.fillStyle = color;
             ctx.fillRect(this.x, this.y, this.w, this.h);
         }
@@ -609,8 +741,6 @@ class Bullet extends BoxCollider {
         return this.dead || this.birth >= this.life;
     }
 }
-
-
 // ========================== // 게임 오브젝트 및 층 변수 // ==========================
 let gameState = 'start'; 
 let player = null;
@@ -623,7 +753,7 @@ let walls = [];
 const GUN_SPECS = {
     'PISTOL': {
         name_kr: '권총',
-        desc_kr: '가장 기본적인 무기로, 우클릭으로 수류탄을 던집니다.',
+        desc_kr: '가장 기본적인 무기',
         damage: 15,
         fireRate: 500, // 0.5초
         bulletSpeed: 18,
@@ -632,7 +762,7 @@ const GUN_SPECS = {
     },
     'SNIPER': {
         name_kr: '저격소총',
-        desc_kr: '높은 데미지를 자랑하지만, 재장전 시간이 매우 깁니다. 우클릭으로 10초간 재장전 시간을 낮춥니다.',
+        desc_kr: '저격에 특화',
         damage: 100,
         fireRate: 2000, // 2초
         bulletSpeed: 30,
@@ -641,7 +771,7 @@ const GUN_SPECS = {
     },
     'SHOTGUN': {
         name_kr: '산탄총',
-        desc_kr: '근거리에서 강력한 산탄을 발사합니다. 스킬을 통해 10초간 두배의 산탄을 발사합니다.',
+        desc_kr: '근접전에 특화',
         damage: 20, // (산탄 1발당 데미지)
         fireRate: 1000, // 1초
         bulletSpeed: 20,
@@ -650,7 +780,7 @@ const GUN_SPECS = {
     },
     'RAILGUN': {
         name_kr: '레일건',
-        desc_kr: '적을 관통하는 레이저를 쏩니다.',
+        desc_kr: '관통하는 레이저',
         damage: 0.05, // (프레임당 데미지)
         fireRate: 1, // 0.001초 (지속 발사)
         bulletSpeed: 20,
@@ -659,7 +789,7 @@ const GUN_SPECS = {
     },
     'TRAPER': {
         name_kr: '지뢰포',
-        desc_kr: '고정된 지뢰를 설치합니다.',
+        desc_kr: '고정된 지뢰 설치',
         damage: 2, // (프레임당 데미지)
         fireRate: 2000,
         bulletSpeed: 0, // (설치형)
@@ -668,7 +798,7 @@ const GUN_SPECS = {
     },
     'KNIFE': {
         name_kr: '칼',
-        desc_kr: '근접무기로, 적에게 지속적인 피해를 줍니다. 스킬로 10초간 무적이 됩니다.',
+        desc_kr: '극단적인 공격력, 극단적인 사거리',
         damage: 10, // (프레임당 데미지)
         fireRate: 1, // 0.001초 (지속 발사)
         bulletSpeed: 0, // (근접)
@@ -677,7 +807,7 @@ const GUN_SPECS = {
     },
     'ROCKET': {
         name_kr: '로켓포',
-        desc_kr: '로켓을 발사하며, 시간을 멈추는 스킬을 사용합니다.',
+        desc_kr: '시간 정지와 로켓을 이용한 극한의 공격력',
         damage: 5, // (프레임당 지속 데미지)
         fireRate: 3000, // 1.7초
         bulletSpeed: 0,
@@ -686,12 +816,21 @@ const GUN_SPECS = {
     },
     'BOOMERANG': {
         name_kr: '부메랑',
-        desc_kr: '되돌아오는 부메랑입니다. 우클릭으로 10초간 더 많은 탄환을 발사합니다.',
+        desc_kr: '후방부 타격을 사용한 빠른 무기',
         damage: 15,
         fireRate: 800,
         bulletSpeed: 20,
         length: 70,
         type: 'boomerang'
+    },
+    'ENEMYGUN': {
+        name_kr: '적의 총',
+        desc_kr: '너가 이걸 보고있다면 난 망했어',
+        damage: 1,
+        fireRate: 5000,
+        bulletSpeed: 20,
+        length : 70,
+        type: 'ENEMYGUN'
     }
 };
 
@@ -904,11 +1043,10 @@ canvas.addEventListener("contextmenu", (e) => {
     }
 });
 
-// ========================== // 게임 루프 (최적화 적용) // ==========================
+// ========================== // 게임 루프 (수정된 충돌 로직) // ==========================
 function gameLoop() {
-    // ... (게임 루프 상단은 수정 없음)
     ctx.clearRect(0, 0, SW, SH);
-    if(TickFreeze){
+    if (TickFreeze) {
         ctx.fillStyle = "rgba(0, 0, 255, 0.2)";
         ctx.fillRect(0, 0, SW, SH);
     }
@@ -918,6 +1056,7 @@ function gameLoop() {
         requestAnimationFrame(gameLoop);
         return;
     }
+
     if (gameState === 'selectGun') {
         drawGunSelection();
         requestAnimationFrame(gameLoop);
@@ -925,6 +1064,7 @@ function gameLoop() {
     }
 
     if (currentFloor > MAX_FLOOR) {
+        // ... (게임 클리어 로직 - 수정 없음)
         ctx.clearRect(0, 0, SW, SH);
         ctx.fillStyle = "#000";
         ctx.fillRect(0, 0, SW, SH);
@@ -937,7 +1077,9 @@ function gameLoop() {
         ctx.fillText("100층을 통과하셨습니다~", SW / 2, SH / 2 + 50);
         return;
     }
+
     if (player.hp <= 0) {
+        // ... (게임 오버 로직 - 수정 없음)
         ctx.clearRect(0, 0, SW, SH);
         ctx.fillStyle = "#FFF";
         ctx.fillRect(0, 0, SW, SH);
@@ -951,54 +1093,99 @@ function gameLoop() {
     }
 
     player.update(input, walls);
-
     if (mouseDown) {
         const angle = Math.atan2(mouseY - (player.y + player.h / 2), mouseX - (player.x + player.w / 2));
         player.gun.shoot(player.x + player.w / 2, player.y + player.h / 2, angle, bullets);
     }
 
+    // ... (적 스폰 로직 - 수정 없음)
     if (totalEnemiesToSpawn > 0 && Date.now() - lastSpawnTime >= SPAWN_INTERVAL && !TickFreeze) {
-        // ... (적 스폰)
-        const enemyHp = ENEMY_BASE_HP + (currentFloor - 1) * 1.5;
+        const enemyHp = ENEMY_BASE_HP + (currentFloor - 1) * 0.5;
         const enemySpeed = ENEMY_BASE_SPEED + (currentFloor - 1) * 0.01;
-        enemies.push(new Enemy(SW - 90, 100, 50, 50, enemySpeed, enemyHp));
+        const spawnX = SW - 90;
+
+        if (currentFloor >= 30 && Math.random() < 0.5) {
+            const enemyGunSpec = GUN_SPECS['ENEMYGUN'];
+            const enemyGun = new Gun(enemyGunSpec.bulletSpeed, enemyGunSpec.length, 1500, 5, enemyGunSpec.type);
+            enemies.push(new ShootingEnemy(spawnX, 100, 50, 50, enemySpeed * 0.6, enemyHp, enemyGun));
+        } else {
+            enemies.push(new Enemy(spawnX, 100, 50, 50, enemySpeed, enemyHp));
+        }
+
         totalEnemiesToSpawn--;
         lastSpawnTime = Date.now();
     }
-    if(!TickFreeze){
+
+    if (!TickFreeze) {
         for (let b of bullets) {
-            b.update(walls, enemies); 
+            b.update(walls, enemies);
         }
     }
 
     const ENEMY_TOUCH_DAMAGE = 1;
-    if(!TickFreeze){
+
+    // 🛑 [수정] 적 업데이트 및 충돌 로직 (폭발형 총알 처리 추가)
+    if (!TickFreeze) {
+        // 1. 적 업데이트 및 플레이어-적 몸통 충돌
         for (let e of enemies) {
-            e.update(player, walls);
-        
+            if (e instanceof ShootingEnemy) {
+                e.update(player, walls, bullets); // 총 쏘는 적
+            } else {
+                e.update(player, walls); // 일반 적
+            }
             if (player.checkCollision(e)) {
                 player.takeDamage(ENEMY_TOUCH_DAMAGE);
             }
-        
-            for (let j = bullets.length - 1; j >= 0; j--) {
-                const bullet = bullets[j];
-                if (bullet.dead || bullet.exploded) continue; 
-            
-                if (bullet.checkCollision(e)) {
-                    if (bullet.type !== "rocket" && bullet.type !== "traper" && bullet.type !== "bomb") {
-                        // 🛑 [수정] player.gun.damage 대신 bullet.damage 사용
-                        e.takeDamage(bullet.damage);
-                        if (bullet.type !== "railgun" && bullet.type !== "deathray") {
+        }
+
+        // 2. 총알 충돌 로직 (소유자 기반으로 분리)
+        for (let j = bullets.length - 1; j >= 0; j--) {
+            const bullet = bullets[j];
+            if (bullet.dead || bullet.exploded) continue;
+
+            // 2-1. 플레이어 총알 -> 적 충돌
+            if (bullet.owner === "player") {
+                for (let e of enemies) {
+                    if (bullet.checkCollision(e)) {
+                        
+                        // 🛑 [수정] 폭발형 총알과 비폭발형 총알 로직 분리
+                        if (bullet.type === "rocket" || bullet.type === "traper" || bullet.type === "bomb") {
+                            // 폭발형 총알: 폭발을 트리거하고 루프 중단
+                            bullet.triggerExplosion();
+                            // (데미지는 bullet.update의 if(this.exploded)에서 처리됨)
+                        } else {
+                            // 비폭발형 총알: 데미지를 주고, 관통형이 아니면 총알 제거
+                            e.takeDamage(bullet.damage);
+                            if (bullet.type !== "railgun" && bullet.type !== "deathray") {
+                                bullet.dead = true;
+                            }
+                        }
+
+                        // 🛑 [수정] 총알이 죽었거나 폭발했다면, 이 총알은 더 이상 검사할 필요 없음
+                        if (bullet.dead || bullet.exploded) {
+                            break; // 안쪽 루프(적 탐색) 탈출
+                        }
+                    }
+                }
+            }
+            // 2-2. 적 총알 -> 플레이어 충돌
+            else if (bullet.owner === "enemy") {
+                if (bullet.checkCollision(player)) {
+                    // 🛑 [수정] 적의 폭발형 총알도 처리 (만약 적이 로켓을 쏜다면)
+                    if (bullet.type === "rocket" || bullet.type === "traper" || bullet.type === "bomb") {
+                        bullet.triggerExplosion();
+                    } else {
+                        player.takeDamage(bullet.damage); // 총알 데미지로 피격
+                        if (bullet.type !== "railgun" && bullet.type !== "deathray") { // 관통형이 아니면
                             bullet.dead = true;
                         }
-                        if(bullet.dead) break;
                     }
                 }
             }
         }
-    }
+    } // End if(!TickFreeze)
+    // 🛑 [수정] 로직 끝 -
 
-    // ... (죽은 객체 필터링 및 그리기 로직은 수정 없음)
     bullets = bullets.filter(b => !b.isDead());
     enemies = enemies.filter(e => !e.dead);
 
@@ -1026,12 +1213,12 @@ function gameLoop() {
     const cooldownText = remainingCooldown > 0 ? `쿨타임: ${(remainingCooldown / 1000).toFixed(1)}s` : (player.isSpecialInvulnerable ? `무적 (1.0s)` : `스킬: 준비 완료(우클릭으로 사용)`);
     ctx.fillStyle = remainingCooldown > 0 ? "red" : "lime";
     ctx.fillText(cooldownText, SW - 500, 30);
-    
+
     player.draw(mouseX, mouseY);
     enemies.forEach((e) => e.draw());
     bullets.forEach((b) => b.draw());
-    
+
     requestAnimationFrame(gameLoop);
 }
 
-gameLoop();
+gameLoop()
