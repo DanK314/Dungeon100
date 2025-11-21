@@ -394,6 +394,7 @@ class Enemy extends BoxCollider {
 
         // 🛑 [최적화] Culling: 화면 밖에 있으면 그리지 않음
         if (this.x + this.w < 0 || this.x > SW || this.y + this.h < 0 || this.y > SH) {
+            this.dead = true;
             return;
         }
 
@@ -968,7 +969,7 @@ function spawnEnemies() {
     if (currentFloor === 50 || currentFloor === 100) {
         let bossHp = (currentFloor === 50) ? 5000 : 10000;
         let bossSize = 200; // 커다란 사각형
-        let spawnRate = 5000; // 2초마다 스폰
+        let spawnRate = 5000; // 5초마다 스폰
         
         // 🛑 [수정] 중앙 하단 스폰 위치 계산
         // 바닥 y좌표(SH - 40)를 기준으로 기지(bossSize)만큼 위로 올림
@@ -981,8 +982,7 @@ function spawnEnemies() {
             bossSize, // w
             bossSize, // h
             bossHp, // hp
-            spawnRate, // spawnInterval
-            0, // 0 = enemiesToSpawn (무한 스폰)
+            spawnRate,
             "#800080" // color (보라색)
         ));
     } 
@@ -1227,8 +1227,8 @@ function gameLoop() {
 
             // (밸런스 조절된 슈팅 적 스폰 로직)
             if (currentFloor >= 30 && Math.random() < 0.5) {
-                const enemyGunSpec = GUN_SPECS['PISTOL'];
-                const enemyGun = new Gun(enemyGunSpec.bulletSpeed, enemyGunSpec.length, 2500, 3, enemyGunSpec.type); 
+                const enemyGunSpec = GUN_SPECS['ENEMYGUN'];
+                const enemyGun = new Gun(enemyGunSpec.bulletSpeed, enemyGunSpec.length, enemyGunSpec.fireRate, 3, enemyGunSpec.type); 
                 enemies.push(new ShootingEnemy(spawnX, 100, 50, 50, enemySpeed * 0.4, enemyHp * 0.8, enemyGun));
             } else {
                 enemies.push(new Enemy(spawnX, 100, 50, 50, enemySpeed, enemyHp));
