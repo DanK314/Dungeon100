@@ -489,6 +489,82 @@ class ShootingEnemy extends Enemy {
         ctx.restore();
     }
 }
+// ==========================
+// 🛑 적 기지 (EnemyBase) 클래스 (신규 추가)
+// ==========================
+class EnemyBase extends BoxCollider {
+    // 🛑 [수정] 생성자에서 HP, 스폰 속도, 스폰 수, 색상을 받도록 변경
+    constructor(x, y, w, h, hp, spawnInterval, enemiesToSpawn, color = "#800080") {
+        super(x, y, w, h);
+        this.hp = hp;
+        this.baseHp = hp;
+        this.spawnInterval = spawnInterval; // 적 스폰 간격 (밀리초)
+        this.color = color; // 기지 색상
+
+        this.dead = false;
+        this.lastSpawnTime = 0;
+    }
+
+    takeDamage(damage) {
+        if (this.dead) return;
+        this.hp -= damage;
+        if (this.hp <= 0) {
+            this.hp = 0;
+            this.dead = true;
+            console.log("Enemy Base Destroyed!");
+            // (참고: 여기에 기지 파괴 시 폭발 효과를 추가할 수 있습니다)
+        }
+    }
+
+    // 🛑 기지의 메인 로직: 적 스폰
+    update(enemies) { // 'enemies' 배열을 외부에서 받아옵니다.
+        if (this.dead) return;
+
+        // 🛑 스폰할 적이 남아있고(0이면 무한), 쿨타임이 지났고, 시간이 멈추지 않았다면
+        const now = Date.now();
+        if (this.enemiesToSpawn !== 0 && now - this.lastSpawnTime > this.spawnInterval && !TickFreeze) {
+            this.lastSpawnTime = now;
+
+            // --- (기존 gameLoop의 적 스폰 로직을 가져옴) ---
+            const enemyHp = ENEMY_BASE_HP + (currentFloor - 1) * 1.5;
+            const enemySpeed = ENEMY_BASE_SPEED + (currentFloor - 1) * 0.01;
+            
+            // 스폰 위치: 기지의 중앙에서 살짝 위
+            const spawnX = this.x + this.w / 2;
+            const spawnY = this.y - 30; // 기지보다 살짝 위에서 스폰
+
+            // 🛑 30층 이상이면 슈팅 적 스폰 (밸런스 조절된 버전 사용)
+            if (currentFloor >= 30 && Math.random() < 0.5) {
+                const enemyGunSpec = GUN_SPECS['ENEMYGUN'];
+                const enemyGun = new Gun(enemyGunSpec.bulletSpeed, enemyGunSpec.length, 1500, 5, enemyGunSpec.type);
+                enemies.push(new ShootingEnemy(spawnX, 100, 50, 50, enemySpeed * 0.6, enemyHp * 0.3, enemyGun));
+            } else {
+                enemies.push(new Enemy(spawnX, 100, 50, 50, enemySpeed, enemyHp));
+            }
+            // --- (스폰 로직 끝) ---
+        }
+    }
+
+    // 🛑 기지 그리기
+    draw() {
+        if (this.dead) return;
+
+        // 기지 몸체
+        ctx.fillStyle = this.color;
+        ctx.fillRect(this.x, this.y, this.w, this.h);
+        
+        // 기지 외곽선
+        ctx.strokeStyle = "black";
+        ctx.lineWidth = 4;
+        ctx.strokeRect(this.x, this.y, this.w, this.h);
+
+        // 기지 체력바
+        ctx.fillStyle = "red";
+        ctx.fillRect(this.x, this.y - 20, this.w, 10);
+        ctx.fillStyle = "lime";
+        ctx.fillRect(this.x, this.y - 20, (this.w * this.hp) / this.baseHp, 10);
+    }
+}
 // ========================== // 총 클래스 (수정) // ==========================
 class Gun {
     constructor(bulletSpeed, length, fireRate, damage, type = "revolver") {
@@ -558,7 +634,7 @@ class Gun {
         this.lastShot = Date.now();
     }
 }
-// ========================== // Bullet 클래스 (수정) // ==========================
+// ========================== // Bullet 클래스 (수정됨) // ==========================
 class Bullet extends BoxCollider {
     // 🛑 [수정] 생성자 맨 뒤에 'owner' 인자 추가
     constructor(
@@ -574,13 +650,13 @@ class Bullet extends BoxCollider {
     ) {
         const size =
             type === "rocket" ||
-                type === "traper" ||
-                type === "boomerang" ||
-                type === "bomb"
+            type === "traper" ||
+            type === "boomerang" ||
+            type === "bomb"
                 ? 20
                 : type === "deathray"
-                    ? 100
-                    : 8;
+                ? 100
+                : 8;
         super(x, y, size, size);
         this.x -= this.w / 2;
         this.y -= this.h / 2;
@@ -614,9 +690,11 @@ class Bullet extends BoxCollider {
         this.h = 40;
     }
 
-    update(walls, enemies = []) {
+    // 🛑 [수정] update 메서드 시그니처에 bossBases 배열 추가
+    update(walls, enemies = [], bossBases = []) {
         this.birth++;
         if (this.dead) return;
+
         if (this.exploded) {
             this.explosionTimer++;
             if (this.explosionTimer >= 30) {
@@ -630,18 +708,30 @@ class Bullet extends BoxCollider {
             this.x = this.centerX - this.w / 2;
             this.y = this.centerY - this.h / 2;
             const yellowPhaseDuration = 15;
+            
             if (this.explosionTimer < yellowPhaseDuration) {
                 const ROCKET_DOT_DAMAGE = this.damage;
-                // 🛑 [수정] 폭발은 '플레이어'가 쏜 것만 적에게 데미지를 줌
+                
+                // 🛑 [수정] 플레이어 폭발일 때만 데미지
                 if (this.owner === "player") {
+                    
+                    // (기존) 적 데미지
                     for (let e of enemies) {
                         if (this.checkCollision(e)) {
                             e.takeDamage(ROCKET_DOT_DAMAGE, true, this.centerX);
                         }
                     }
+                    
+                    // 🛑 [추가] 보스 기지 데미지
+                    for (let base of bossBases) {
+                        if (!base.dead && this.checkCollision(base)) {
+                            // 기지는 넉백이 필요 없으므로 takeDamage(damage)만 호출
+                            base.takeDamage(ROCKET_DOT_DAMAGE); 
+                        }
+                    }
                 }
             }
-        }
+        } // if (this.exploded) 끝
 
         let nextX = this.x + Math.cos(this.angle) * this.speed;
         let nextY = this.y + Math.sin(this.angle) * this.speed;
@@ -662,8 +752,7 @@ class Bullet extends BoxCollider {
             }
         }
 
-        // 🛑 [제거] 총알-적 충돌 로직은 gameLoop로 이동했습니다.
-
+        // ... (화면 밖 경계 충돌 로직) ...
         if (
             nextY + this.h >= SH ||
             nextY <= 0 ||
@@ -676,6 +765,7 @@ class Bullet extends BoxCollider {
                 this.dead = true;
             }
         }
+        
         // 이동
         this.x = nextX;
         this.y = nextY;
@@ -716,19 +806,18 @@ class Bullet extends BoxCollider {
         } else {
             let color =
                 this.type === "rocket" ||
-                    this.type === "traper" ||
-                    this.type === "deathray"
+                this.type === "traper" ||
+                this.type === "deathray"
                     ? "red"
                     : this.type === "bomb"
-                        ? "#005500"
-                        : "orange";
+                    ? "#005500"
+                    : "orange";
 
-            // 🛑 [수정] 부메랑 및 적 총알 색상 변경
             if (this.type === "boomerang" && this.returnDamageApplied) {
-                color = "cyan"; // 돌아올 때 색상을 하늘색으로
+                color = "cyan";
             }
             if (this.owner === "enemy") {
-                color = "magenta"; // 🛑 적 총알 색상
+                color = "magenta";
             }
 
             ctx.fillStyle = color;
@@ -747,6 +836,7 @@ let player = null;
 let bullets = [];
 let enemies = [];
 let walls = [];
+let bossBases = [];
 
 // 🛑 무기 스펙 정의 (가독성 수정)
 const GUN_SPECS = {
@@ -798,7 +888,7 @@ const GUN_SPECS = {
     'KNIFE': {
         name_kr: '칼',
         desc_kr: '극단적인 공격력, 극단적인 사거리',
-        damage: 3, // (프레임당 데미지)
+        damage: 1, // (프레임당 데미지)
         fireRate: 1, // 0.001초 (지속 발사)
         bulletSpeed: 0, // (근접)
         length: 50,
@@ -860,18 +950,48 @@ function selectGun(gunType) {
     spawnEnemies();
 }
 
+// ========================== // 적 생성 함수 (수정됨) // ==========================
 function spawnEnemies() {
-    enemies.length = 0;
-    totalEnemiesToSpawn = Math.floor(currentFloor / 5) + 1;
-    lastSpawnTime = Date.now();
+    enemies.length = 0; // 기존 적 제거
+    bossBases.length = 0; // 기존 보스 기지 제거
+    totalEnemiesToSpawn = 0; // 일반 스폰 카운트 초기화
+
+    // 플레이어 위치 초기화
     if (player) {
         player.x = 50;
         player.y = 100;
         player.vx = 0;
         player.vy = 0;
     }
-}
 
+    // 보스 스테이지 (50, 100) 로직
+    if (currentFloor === 50 || currentFloor === 100) {
+        let bossHp = (currentFloor === 50) ? 5000 : 10000;
+        let bossSize = 200; // 커다란 사각형
+        let spawnRate = 5000; // 2초마다 스폰
+        
+        // 🛑 [수정] 중앙 하단 스폰 위치 계산
+        // 바닥 y좌표(SH - 40)를 기준으로 기지(bossSize)만큼 위로 올림
+        let bossX = (SW / 2) - (bossSize / 2); // 화면 가로 중앙
+        let bossY = SH - 40 - bossSize;      // 화면 바닥 플랫폼 바로 위
+        
+        bossBases.push(new EnemyBase(
+            bossX, // x
+            bossY, // y
+            bossSize, // w
+            bossSize, // h
+            bossHp, // hp
+            spawnRate, // spawnInterval
+            0, // 0 = enemiesToSpawn (무한 스폰)
+            "#800080" // color (보라색)
+        ));
+    } 
+    // 일반 스테이지 로직
+    else {
+        totalEnemiesToSpawn = Math.floor(currentFloor / 5) + 1;
+        lastSpawnTime = Date.now();
+    }
+}
 function setupWalls() {
     walls = [
         new BoxCollider(0, SH - 40, SW, 40),
@@ -1043,10 +1163,8 @@ canvas.addEventListener("contextmenu", (e) => {
     }
 });
 
-// ========================== // 게임 루프 (수정된 충돌 로직) // ==========================
+// ========================== // 게임 루프 (수정됨) // ==========================
 function gameLoop() {
-    // 2초마다 개발자 도구가 열려있는지 검사
-
     ctx.clearRect(0, 0, SW, SH);
     if (TickFreeze) {
         ctx.fillStyle = "rgba(0, 0, 255, 0.2)";
@@ -1054,7 +1172,6 @@ function gameLoop() {
     }
 
     if (gameState === 'start') {
-        currentFloor = 1;
         drawStartScreen();
         requestAnimationFrame(gameLoop);
         return;
@@ -1067,10 +1184,6 @@ function gameLoop() {
     }
 
     if (currentFloor > MAX_FLOOR) {
-        if (UsedDebugger) {
-            currentFloor = 1;
-        }
-        // ... (게임 클리어 로직 - 수정 없음)
         ctx.clearRect(0, 0, SW, SH);
         ctx.fillStyle = "#000";
         ctx.fillRect(0, 0, SW, SH);
@@ -1085,7 +1198,6 @@ function gameLoop() {
     }
 
     if (player.hp <= 0) {
-        // ... (게임 오버 로직 - 수정 없음)
         ctx.clearRect(0, 0, SW, SH);
         ctx.fillStyle = "#FFF";
         ctx.fillRect(0, 0, SW, SH);
@@ -1104,34 +1216,44 @@ function gameLoop() {
         player.gun.shoot(player.x + player.w / 2, player.y + player.h / 2, angle, bullets);
     }
 
-    // ... (적 스폰 로직 - 수정 없음)
-    if (totalEnemiesToSpawn > 0 && Date.now() - lastSpawnTime >= SPAWN_INTERVAL && !TickFreeze) {
-        const enemyHp = ENEMY_BASE_HP + (currentFloor - 1) * 0.5;
-        const enemySpeed = ENEMY_BASE_SPEED + (currentFloor - 1) * 0.01;
-        const spawnX = SW - 90;
+    // 보스 층이 아닐 때만 일반 적을 스폰
+    if (currentFloor !== 50 && currentFloor !== 100) {
+        if (totalEnemiesToSpawn > 0 && Date.now() - lastSpawnTime >= SPAWN_INTERVAL && !TickFreeze) {
+            const enemyHp = ENEMY_BASE_HP + (currentFloor - 1) * 1.5;
+            const enemySpeed = ENEMY_BASE_SPEED + (currentFloor - 1) * 0.01;
+            
+            // 🛑 [수정] 스폰 위치를 오른쪽(SW - 90)으로 고정
+            const spawnX = SW - 90; 
 
-        if (currentFloor >= 30 && Math.random() < 0.5) {
-            const enemyGunSpec = GUN_SPECS['ENEMYGUN'];
-            const enemyGun = new Gun(enemyGunSpec.bulletSpeed, enemyGunSpec.length, 1500, 5, enemyGunSpec.type);
-            enemies.push(new ShootingEnemy(spawnX, 100, 50, 50, enemySpeed * 0.6, enemyHp * 0.3, enemyGun));
-        } else {
-            enemies.push(new Enemy(spawnX, 100, 50, 50, enemySpeed, enemyHp));
+            // (밸런스 조절된 슈팅 적 스폰 로직)
+            if (currentFloor >= 30 && Math.random() < 0.5) {
+                const enemyGunSpec = GUN_SPECS['PISTOL'];
+                const enemyGun = new Gun(enemyGunSpec.bulletSpeed, enemyGunSpec.length, 2500, 3, enemyGunSpec.type); 
+                enemies.push(new ShootingEnemy(spawnX, 100, 50, 50, enemySpeed * 0.4, enemyHp * 0.8, enemyGun));
+            } else {
+                enemies.push(new Enemy(spawnX, 100, 50, 50, enemySpeed, enemyHp));
+            }
+
+            totalEnemiesToSpawn--;
+            lastSpawnTime = Date.now();
         }
-
-        totalEnemiesToSpawn--;
-        lastSpawnTime = Date.now();
     }
 
     if (!TickFreeze) {
         for (let b of bullets) {
-            b.update(walls, enemies);
+            // 🛑 [수정] bullet.update에 bossBases 배열 전달
+            b.update(walls, enemies, bossBases);
         }
     }
 
     const ENEMY_TOUCH_DAMAGE = 1;
 
-    // 🛑 [수정] 적 업데이트 및 충돌 로직 (폭발형 총알 처리 추가)
     if (!TickFreeze) {
+        // 보스 기지 업데이트 (기지에서 적 스폰)
+        for (let base of bossBases) {
+            base.update(enemies);
+        }
+
         // 1. 적 업데이트 및 플레이어-적 몸통 충돌
         for (let e of enemies) {
             if (e instanceof ShootingEnemy) {
@@ -1149,40 +1271,48 @@ function gameLoop() {
             const bullet = bullets[j];
             if (bullet.dead || bullet.exploded) continue;
 
-            // 2-1. 플레이어 총알 -> 적 충돌
+            // 2-1. 플레이어 총알 -> 적 / 기지 충돌
             if (bullet.owner === "player") {
+                // 총알 vs 적
                 for (let e of enemies) {
                     if (bullet.checkCollision(e)) {
-
-                        // 🛑 [수정] 폭발형 총알과 비폭발형 총알 로직 분리
                         if (bullet.type === "rocket" || bullet.type === "traper" || bullet.type === "bomb") {
-                            // 폭발형 총알: 폭발을 트리거하고 루프 중단
                             bullet.triggerExplosion();
-                            // (데미지는 bullet.update의 if(this.exploded)에서 처리됨)
                         } else {
-                            // 비폭발형 총알: 데미지를 주고, 관통형이 아니면 총알 제거
                             e.takeDamage(bullet.damage);
                             if (bullet.type !== "railgun" && bullet.type !== "deathray") {
                                 bullet.dead = true;
                             }
                         }
+                        if (bullet.dead || bullet.exploded) break;
+                    }
+                }
+                
+                if (bullet.dead || bullet.exploded) continue;
 
-                        // 🛑 [수정] 총알이 죽었거나 폭발했다면, 이 총알은 더 이상 검사할 필요 없음
-                        if (bullet.dead || bullet.exploded) {
-                            break; // 안쪽 루프(적 탐색) 탈출
+                // 총알 vs 보스 기지
+                for (let base of bossBases) {
+                    if (!base.dead && bullet.checkCollision(base)) {
+                        if (bullet.type === "rocket" || bullet.type === "traper" || bullet.type === "bomb") {
+                            bullet.triggerExplosion();
+                        } else {
+                            base.takeDamage(bullet.damage);
+                            if (bullet.type !== "railgun" && bullet.type !== "deathray") {
+                                bullet.dead = true;
+                            }
                         }
+                        if (bullet.dead || bullet.exploded) break;
                     }
                 }
             }
             // 2-2. 적 총알 -> 플레이어 충돌
             else if (bullet.owner === "enemy") {
                 if (bullet.checkCollision(player)) {
-                    // 🛑 [수정] 적의 폭발형 총알도 처리 (만약 적이 로켓을 쏜다면)
                     if (bullet.type === "rocket" || bullet.type === "traper" || bullet.type === "bomb") {
                         bullet.triggerExplosion();
                     } else {
-                        player.takeDamage(bullet.damage); // 총알 데미지로 피격
-                        if (bullet.type !== "railgun" && bullet.type !== "deathray") { // 관통형이 아니면
+                        player.takeDamage(bullet.damage);
+                        if (bullet.type !== "railgun" && bullet.type !== "deathray") {
                             bullet.dead = true;
                         }
                     }
@@ -1190,20 +1320,38 @@ function gameLoop() {
             }
         }
     } // End if(!TickFreeze)
-    // 🛑 [수정] 로직 끝 -
 
+    // 죽은 객체 필터링
     bullets = bullets.filter(b => !b.isDead());
     enemies = enemies.filter(e => !e.dead);
+    // (죽은 보스 기지 필터링은 층 이동 로직에서 .dead 플래그로 검사하므로 생략 가능)
 
-    if (enemies.length === 0 && totalEnemiesToSpawn === 0) {
-        if (currentFloor < MAX_FLOOR) {
-            currentFloor++;
-            spawnEnemies();
-        } else if (currentFloor === MAX_FLOOR) {
-            currentFloor++;
+    // 다음 층 이동 로직 (보스 층 클리어 조건)
+    let allBasesDestroyed = bossBases.length > 0 && bossBases.every(base => base.dead);
+
+    if (currentFloor === 50 || currentFloor === 100) {
+        // 보스 층: 모든 기지가 파괴되고 + 화면의 모든 적이 없어야 함
+        if (allBasesDestroyed && enemies.length === 0) {
+            if (currentFloor < MAX_FLOOR) {
+                currentFloor++;
+                spawnEnemies();
+            } else if (currentFloor === MAX_FLOOR) {
+                currentFloor++; // 게임 클리어
+            }
+        }
+    } else {
+        // 일반 층: 스폰할 적이 없고 + 화면의 모든 적이 없어야 함
+        if (totalEnemiesToSpawn === 0 && enemies.length === 0) {
+            if (currentFloor < MAX_FLOOR) {
+                currentFloor++;
+                spawnEnemies();
+            } else if (currentFloor === MAX_FLOOR) {
+                currentFloor++; // 게임 클리어
+            }
         }
     }
 
+    // 그리기 (Draw)
     ctx.fillStyle = "#444";
     walls.forEach((w) => {
         if (w.x + w.w >= 0 && w.x <= SW && w.y + w.h >= 0 && w.y <= SH) {
@@ -1219,6 +1367,11 @@ function gameLoop() {
     const cooldownText = remainingCooldown > 0 ? `쿨타임: ${(remainingCooldown / 1000).toFixed(1)}s` : (player.isSpecialInvulnerable ? `무적 (1.0s)` : `스킬: 준비 완료(우클릭으로 사용)`);
     ctx.fillStyle = remainingCooldown > 0 ? "red" : "lime";
     ctx.fillText(cooldownText, SW - 500, 30);
+
+    // 보스 기지 그리기
+    for (let base of bossBases) {
+        base.draw();
+    }
 
     player.draw(mouseX, mouseY);
     enemies.forEach((e) => e.draw());
