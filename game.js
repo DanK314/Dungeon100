@@ -916,9 +916,9 @@ const GUN_SPECS = {
     'ENEMYGUN': {
         name_kr: '적의 총',
         desc_kr: '너가 이걸 보고있다면 난 망했어',
-        damage: 1,
-        fireRate: 15000,
-        bulletSpeed: 20,
+        damage: 3,
+        fireRate: 2500,
+        bulletSpeed: 15,
         length: 70,
         type: 'ENEMYGUN'
     }
