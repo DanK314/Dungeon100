@@ -530,15 +530,15 @@ class EnemyBase extends BoxCollider {
 
             // 스폰 위치: 기지의 중앙에서 살짝 위
             const spawnX = this.x + this.w / 2;
-            const spawnY = this.y + this.h / 2; // 기지보다 살짝 위에서 스폰
+            const spawnY = this.y + this.h / 2;
 
             // 🛑 30층 이상이면 슈팅 적 스폰 (밸런스 조절된 버전 사용)
             if (currentFloor >= 30 && Math.random() < 0.5) {
                 const enemyGunSpec = GUN_SPECS['ENEMYGUN'];
                 const enemyGun = new Gun(enemyGunSpec.bulletSpeed, enemyGunSpec.length, 1500, 5, enemyGunSpec.type);
-                enemies.push(new ShootingEnemy(spawnX, 100, 50, 50, enemySpeed * 0.6, enemyHp * 0.3, enemyGun));
+                enemies.push(new ShootingEnemy(spawnX, spawnY, 50, 50, enemySpeed * 0.6, enemyHp * 0.3, enemyGun));
             } else {
-                enemies.push(new Enemy(spawnX, 100, 50, 50, enemySpeed, enemyHp));
+                enemies.push(new Enemy(spawnX, spawnY, 50, 50, enemySpeed, enemyHp));
             }
             // --- (스폰 로직 끝) ---
         }
