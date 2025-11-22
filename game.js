@@ -201,11 +201,11 @@ class Player extends BoxCollider {
                 mouseX - (this.x + this.w / 2)
             );
             // 🛑 [수정] player -> this
-            for (let i = -2; i <= 100; i++) {
+            for (let i = -2; i <= 50; i++) {
                 setTimeout(() => {
                     // 🛑 [수정] "player" owner 추가
                     bullets.push(
-                        new Bullet(this.x, this.y, angle, 50, 50, 100, 50, "deathray", "player")
+                        new Bullet(this.x, this.y, angle, 50, 10, 100, 50, "deathray", "player")
                     );
                 }, i * 5);
             }
