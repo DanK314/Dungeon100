@@ -504,9 +504,9 @@ class EnemyDrone extends Enemy {
             bullets.push(new Bullet(this.x + (this.w / 2), this.y, 0, 0, this.damage, 1000, 0, "bomb", "enemy"));
             this.ThrowTimer = 0;
         }
-        if (this.y > SH - 200) {
+        if (this.y > SH - 500) {
             this.vy = -0.5 * this.speed;
-        } else if (this.y < SH - 500) {
+        } else if (this.y < SH - 200) {
             this.vy = 0.5 * this.speed;
         }
         if (player.x + (player.w / 2) > this.x + (this.w / 2)) {
@@ -514,7 +514,7 @@ class EnemyDrone extends Enemy {
         } else if (player.x + (player.w / 2) < this.x + (this.w / 2)) {
             this.vx = -this.speed;
         }
-        if (player.y + (player.h / 2) < SH - 500 && player.y + (player.h / 2) > SH - 400) {
+        if (player.y + (player.h / 2) < SH - 500 && player.y + (player.h / 2) > SH - 200) {
             this.vx = -this.vx;
         }
         this.x += this.vx;
