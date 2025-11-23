@@ -490,6 +490,53 @@ class ShootingEnemy extends Enemy {
         ctx.restore();
     }
 }
+class EnemyDrone extends Enemy {
+    constructor(x, y, w, h, speed, hp, damage, interval) {
+        super(x, y, w, h, speed, hp);
+        this.damage = damage;
+        this.ThrowInterval = interval;
+        this.ThrowTimer = 0;
+    }
+    update(player, walls, bullets) {
+        if (this.dead) return;
+        this.ThrowTimer++;
+        if (player.x + (player.w / 2) + 50 > this.x + (this.w / 2) && player.x + (player.w / 2) - 50 < this.x + (this.w / 2) && this.ThrowTimer > this.ThrowInterval) {
+            bullets.push(new Bullet(this.x + (this.w / 2), this.y, 0, 0, this.damage, 1000, 0, "bomb", "enemy"));
+            this.ThrowTimer = 0;
+        }
+        if (this.y > SH - 400) {
+            this.vy = -this.speed;
+        } else if (this.y < SH - 500) {
+            this.vy = this.speed;
+        }
+        if (player.x + (player.w / 2) > this.x + (this.w / 2)) {
+            this.vx = this.speed;
+        } else if (player.x + (player.w / 2) < this.x + (this.w / 2)) {
+            this.vx = -this.speed;
+        }
+        if (player.y + (player.h / 2) < SH - 500 && player.y + (player.h / 2) > SH - 400) {
+            this.vx = -this.vx;
+        }
+        this.x += this.vx;
+        this.y += this.vy;
+        //벽 충돌 (튕겨나가기)
+        for (let w of walls) {
+            if (this.checkCollision(w)) {
+                // resolveCollision 대신 튕겨나가도록 로직 수정
+                const overlapX = Math.min(this.x + this.w, w.x + w.w) - Math.max(this.x, w.x);
+                const overlapY = Math.min(this.y + this.h, w.y + w.h) - Math.max(this.y, w.y);
+
+                if (overlapX < overlapY) { // X축 충돌
+                    this.x += (this.vx > 0 ? -overlapX : overlapX);
+                    this.vx = -this.vx; // 튕기기
+                } else { // Y축 충돌
+                    this.y += (this.vy > 0 ? -overlapY : overlapY);
+                    this.vy = -this.vy; // 튕기기
+                }
+            }
+        }
+    }
+}
 // ==========================
 // 🛑 적 기지 (EnemyBase) 클래스 (신규 추가)
 // ==========================
@@ -519,7 +566,7 @@ class EnemyBase extends BoxCollider {
     // 🛑 기지의 메인 로직: 적 스폰
     update(enemies) { // 'enemies' 배열을 외부에서 받아옵니다.
         if (this.dead) return;
-        if(!TickFreeze) this.lastSpawnTime ++;
+        if (!TickFreeze) this.lastSpawnTime++;
         // 🛑 스폰할 적이 남아있고(0이면 무한), 쿨타임이 지났고, 시간이 멈추지 않았다면
         if (this.lastSpawnTime >= this.spawnInterval && !TickFreeze) {
             this.lastSpawnTime = 0;
@@ -537,6 +584,8 @@ class EnemyBase extends BoxCollider {
                 const enemyGunSpec = GUN_SPECS['ENEMYGUN'];
                 const enemyGun = new Gun(enemyGunSpec.bulletSpeed, enemyGunSpec.length, 1500, 5, enemyGunSpec.type);
                 enemies.push(new ShootingEnemy(spawnX, spawnY, 50, 50, enemySpeed * 0.6, enemyHp * 0.3, enemyGun));
+            } else if (currentFloor >= 60 && Math.random() < 0.5) {
+                enemies.push(new EnemyDrone(spawnX, spawnY, 50, 20, enemySpeed * 1.5, enemyHp * 0.1, 10, 300));
             } else {
                 enemies.push(new Enemy(spawnX, spawnY, 50, 50, enemySpeed, enemyHp));
             }
@@ -708,8 +757,10 @@ class Bullet extends BoxCollider {
         this.h = 40;
     }
 
-    // 🛑 [수정] update 메서드 시그니처에 bossBases 배열 추가
-    update(walls, enemies = [], bossBases = []) {
+    // ========================== // Bullet.update (수정) // ==========================
+
+    // 🛑 [수정] update 메서드 시그니처에 'player' 추가
+    update(walls, enemies = [], bossBases = [], player = null) {
         this.birth++;
         if (this.dead) return;
 
@@ -730,7 +781,7 @@ class Bullet extends BoxCollider {
             if (this.explosionTimer < yellowPhaseDuration) {
                 const ROCKET_DOT_DAMAGE = this.damage;
 
-                // 🛑 [수정] 플레이어 폭발일 때만 데미지
+                // 🛑 [수정] 폭발 데미지 로직 수정
                 if (this.owner === "player") {
 
                     // (기존) 적 데미지
@@ -740,14 +791,22 @@ class Bullet extends BoxCollider {
                         }
                     }
 
-                    // 🛑 [추가] 보스 기지 데미지
+                    // (기존) 보스 기지 데미지
                     for (let base of bossBases) {
                         if (!base.dead && this.checkCollision(base)) {
-                            // 기지는 넉백이 필요 없으므로 takeDamage(damage)만 호출
                             base.takeDamage(ROCKET_DOT_DAMAGE);
                         }
                     }
                 }
+                // 🛑 [추가] 적 폭발 -> 플레이어 데미지
+                else if (this.owner === "enemy") {
+                    // player 객체가 존재하고, 폭발 범위와 충돌했다면
+                    if (player && this.checkCollision(player)) {
+                        // 플레이어는 넉백이 필요 없음
+                        player.takeDamage(ROCKET_DOT_DAMAGE);
+                    }
+                }
+                // 🛑 [수정 끝]
             }
         } // if (this.exploded) 끝
 
@@ -806,7 +865,6 @@ class Bullet extends BoxCollider {
             }
         }
     }
-
     draw() {
         if (this.dead) return;
         if (
@@ -1240,14 +1298,17 @@ function gameLoop() {
 
             // 🛑 [수정] 스폰 위치를 오른쪽(SW - 90)으로 고정
             const spawnX = SW - 90;
+            const spawnY = 500
 
-            // (밸런스 조절된 슈팅 적 스폰 로직)
+            // 🛑 30층 이상이면 슈팅 적 스폰 (밸런스 조절된 버전 사용)
             if (currentFloor >= 30 && Math.random() < 0.5) {
                 const enemyGunSpec = GUN_SPECS['ENEMYGUN'];
-                const enemyGun = new Gun(enemyGunSpec.bulletSpeed, enemyGunSpec.length, enemyGunSpec.fireRate, 3, enemyGunSpec.type);
-                enemies.push(new ShootingEnemy(spawnX, 100, 50, 50, enemySpeed * 0.4, enemyHp * 0.8, enemyGun));
+                const enemyGun = new Gun(enemyGunSpec.bulletSpeed, enemyGunSpec.length, 1500, 5, enemyGunSpec.type);
+                enemies.push(new ShootingEnemy(spawnX, spawnY, 50, 50, enemySpeed * 0.6, enemyHp * 0.3, enemyGun));
+            } else if (currentFloor >= 60 && Math.random() < 0.5) {
+                enemies.push(new EnemyDrone(spawnX, spawnY, 50, 20, enemySpeed * 1.5, enemyHp * 0.3, 10, 300));
             } else {
-                enemies.push(new Enemy(spawnX, 100, 50, 50, enemySpeed, enemyHp));
+                enemies.push(new Enemy(spawnX, spawnY, 50, 50, enemySpeed, enemyHp));
             }
 
             totalEnemiesToSpawn--;
@@ -1258,7 +1319,7 @@ function gameLoop() {
     if (!TickFreeze) {
         for (let b of bullets) {
             // 🛑 [수정] bullet.update에 bossBases 배열 전달
-            b.update(walls, enemies, bossBases);
+            b.update(walls, enemies, bossBases, player);
         }
     }
 
@@ -1272,7 +1333,7 @@ function gameLoop() {
 
         // 1. 적 업데이트 및 플레이어-적 몸통 충돌
         for (let e of enemies) {
-            if (e instanceof ShootingEnemy) {
+            if (e instanceof ShootingEnemy || e instanceof EnemyDrone) {
                 e.update(player, walls, bullets); // 총 쏘는 적
             } else {
                 e.update(player, walls); // 일반 적
