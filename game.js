@@ -504,11 +504,18 @@ class EnemyDrone extends Enemy {
             bullets.push(new Bullet(this.x + (this.w / 2), this.y, 0, 0, this.damage, 1000, 0, "bomb", "enemy"));
             this.ThrowTimer = 0;
         }
-        if (this.y > SH - 500) {
-            this.vy = -0.5 * this.speed;
-        } else if (this.y < SH - 200) {
-            this.vy = 0.5 * this.speed;
+
+        // 🛑 [수정] Y축 순찰 로직
+        // 현재 속도가 양수(아래로)인데 바닥 경계(SH - 200)를 넘으면
+        if (this.vy > 0 && this.y > SH - 200) { 
+            this.vy = -0.5 * this.speed; // 위로 방향 전환
+        } 
+        // 현재 속도가 음수(위로)인데 천장 경계(SH - 500)를 넘으면
+        else if (this.vy < 0 && this.y < SH - 500) { 
+            this.vy = 0.5 * this.speed; // 아래로 방향 전환
         }
+        // (이 외의 경우, 즉 순찰 영역 안에서는 기존 vy 속도를 유지합니다)
+
         if (player.x + (player.w / 2) > this.x + (this.w / 2)) {
             this.vx = this.speed;
         } else if (player.x + (player.w / 2) < this.x + (this.w / 2)) {
@@ -519,10 +526,10 @@ class EnemyDrone extends Enemy {
         }
         this.x += this.vx;
         this.y += this.vy;
-        //벽 충돌 (튕겨나가기)
+        
+        //벽 충돌 (튕겨나가기) - 이 로직은 정상이므로 수정 X
         for (let w of walls) {
             if (this.checkCollision(w)) {
-                // resolveCollision 대신 튕겨나가도록 로직 수정
                 const overlapX = Math.min(this.x + this.w, w.x + w.w) - Math.max(this.x, w.x);
                 const overlapY = Math.min(this.y + this.h, w.y + w.h) - Math.max(this.y, w.y);
 
