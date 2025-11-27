@@ -61,7 +61,7 @@ class BoxCollider {
     }
 }
 
-// ========================== // 플레이어 클래스 // ==========================
+// ========================== // 플레이어 클래스 (전체 교체) // ==========================
 class Player extends BoxCollider {
     constructor(x, y, w, h, speed, gun) {
         super(x, y, w, h);
@@ -77,43 +77,70 @@ class Player extends BoxCollider {
         this.jumpLocked = false;
         this.isSpecialInvulnerable = false;
         this.specialInvulnerabilityTime = 0;
-        this.specialAbilityCooldown = 20000;
+        
+        // 🛑 [수정] 기존 스킬 쿨타임 (다른 총기용)
+        this.specialAbilityCooldown = 30000;
         this.lastSpecialAbilityTime = 0;
+
+        // 🛑 [추가] 칼(Knife) 전용 상태 변수
+        this.isMeleeSwinging = false;       // 0.2초간 휘두르는 중인지
+        this.meleeSwingEndTime = 0;
+        this.meleeSwingDuration = 200;      // 0.2초
+        this.lastMeleeSwingTime = 0;        // 0.5초 공격 쿨타임
+        this.meleeAngle = 0;                // 휘두른 방향
+        this.enemiesHitThisSwing = new Set(); // 이번 스윙(0.2초)에 맞은 적 목록 (중복 안 맞게)
+
+        this.isDashing = false;             // 0.5초간 돌진 중인지
+        this.dashEndTime = 0;
+        this.dashDuration = 200;            // 0.2초
+        this.lastDashTime = 0;
+        this.dashCooldown = 1000;           // 5초 (칼 스킬 쿨타임)
+        this.dashSpeed = 50;                // 돌진 속도
     }
+
     applyGravity(gravity) {
         this.vy += gravity;
         if (this.vy > 15) this.vy = 15;
     }
+
+    // 🛑 [수정] useSpecialAbility - 칼 로직 완전 변경
     useSpecialAbility() {
         const now = Date.now();
-        // 🛑 [수정] 쿨타임 체크를 맨 위로 이동
+
+        // 🛑 [추가] 칼 스킬(돌진) 로직
+        if (this.gun.type === 'knife') {
+            // 5초 쿨타임 체크
+            if (now - this.lastDashTime < this.dashCooldown) {
+                const remaining = Math.max(0, this.dashCooldown - (now - this.lastDashTime));
+                console.log(`Dash on cooldown. Remaining: ${(remaining / 1000).toFixed(2)}s`);
+                return false;
+            }
+            
+            this.isDashing = true;
+            this.dashEndTime = now + this.dashDuration;
+            this.lastDashTime = now;
+            
+            // 🛑 0.5초 돌진 시간 동안 무적 적용
+            this.hp += 1;
+            this.isSpecialInvulnerable = true;
+            this.specialInvulnerabilityTime = now + this.dashDuration;
+            const angle = Math.atan2(mouseY - (player.y + player.h / 2), mouseX - (player.x + player.w / 2));
+            this.meleeAttack(angle)
+            
+            console.log("Knife Dash!");
+            return true;
+        }
+
+        // 🛑 [수정] 쿨타임 체크를 (칼 스킬을 제외한) 나머지 스킬 맨 위로 이동
         if (now - this.lastSpecialAbilityTime < this.specialAbilityCooldown) {
-            const remaining = Math.max(
-                0,
-                this.specialAbilityCooldown - (Date.now() - this.lastSpecialAbilityTime)
-            );
-            console.log(
-                `Special Ability on cooldown. Remaining: ${(remaining / 1000).toFixed(
-                    2
-                )}s`
-            );
+            const remaining = Math.max(0, this.specialAbilityCooldown - (now - this.lastSpecialAbilityTime));
+            console.log(`Special Ability on cooldown. Remaining: ${(remaining / 1000).toFixed(2)}s`);
             return false;
         }
-        if (this.gun.type === "knife") {
-            this.isSpecialInvulnerable = true;
-            const invulDuration = 10000;
-            this.specialInvulnerabilityTime = now + invulDuration;
-            this.lastSpecialAbilityTime = now;
-            this.speed += 5;
-            this.hp += this.hp < 20 ? 30 : 0;
-            this.gun.damage += 10;
-            console.log(
-                `Special Ability Used: ${invulDuration / 1000
-                } sec Invulnerability, Speed+5, Damage+10!`
-            );
-            return true;
-        } else if (this.gun.type === "traper") {
-            const healAmount = 50;
+        
+        // ... (나머지 총기 스킬 로직은 동일)
+        if (this.gun.type === 'traper') {
+            const healAmount = 30;
             this.hp += healAmount;
             this.hp = this.hp > 100 ? 100 : this.hp;
             const FireRateMultiplier = 0.1;
@@ -124,36 +151,35 @@ class Player extends BoxCollider {
             }, 10000);
             console.log(`Special Ability Used: Healed +${healAmount} HP.`);
             return true;
-            // 🛑 [추가] 샷건 스킬 로직
-        } else if (this.gun.type === "shotgun") {
-            const healAmount = 30;
+        } else if (this.gun.type === 'shotgun') {
+            const healAmount = 10;
             this.hp += healAmount;
             this.hp = this.hp > 100 ? 100 : this.hp;
-            this.gun.SpecialAbility = true; // Gun 클래스의 플래그 활성화
+            this.gun.SpecialAbility = true; 
             this.lastSpecialAbilityTime = now;
             setTimeout(() => {
-                this.gun.SpecialAbility = false; // 10초 뒤 비활성화
+                this.gun.SpecialAbility = false;
             }, 10000);
             console.log(`Special Ability Used: Shotgun spread doubled for 10 sec!`);
             return true;
-        } else if (this.gun.type === "rocket") {
-            const healAmount = 30;
+        } else if (this.gun.type === 'rocket') {
+            const healAmount = 10;
             this.hp += healAmount;
             this.hp = this.hp > 100 ? 100 : this.hp;
             const FireRateMultiplier = 0.1;
             this.gun.fireRate *= FireRateMultiplier;
             this.lastSpecialAbilityTime = now;
             TickFreeze = true;
-            this.speed = 10; // 🛑 [수정] 시간 멈춤 시 속도 증가
+            this.speed = 10; 
             setTimeout(() => {
                 this.gun.fireRate /= FireRateMultiplier;
                 TickFreeze = false;
-                this.speed = this.defspeed; // 🛑 [수정] 시간 멈춤 해제 시 속도 원복
+                this.speed = this.defspeed; 
             }, 5000);
             console.log(`Special Ability Used: Healed +${healAmount} HP.`);
-            return true; // 🛑 [수정] return true 추가
-        } else if (this.gun.type === "sniper") {
-            const healAmount = 70;
+            return true;
+        } else if (this.gun.type === 'sniper') {
+            const healAmount = 50;
             this.hp += healAmount;
             this.hp = this.hp > 100 ? 100 : this.hp;
             const originalReload = this.gun.fireRate;
@@ -165,8 +191,8 @@ class Player extends BoxCollider {
             this.lastSpecialAbilityTime = now;
             console.log(`Special Ability Used: Healed +${healAmount} HP.`);
             return true;
-        } else if (this.gun.type === "revolver") {
-            const healAmount = 50;
+        } else if (this.gun.type === 'revolver') {
+            const healAmount = 30;
             this.hp += healAmount;
             this.hp = this.hp > 100 ? 100 : this.hp;
             this.lastSpecialAbilityTime = now;
@@ -174,25 +200,24 @@ class Player extends BoxCollider {
                 mouseY - (this.y + this.h / 2),
                 mouseX - (this.x + this.w / 2)
             );
-            // 🛑 [수정] "player" owner 추가
             bullets.push(
                 new Bullet(this.x, this.y, angle, 15, 30, 10000, 0, "bomb", "player")
             );
             console.log(`Special Ability Used: Healed +${healAmount} HP.`);
             return true;
-        } else if (this.gun.type === "boomerang") {
-            const healAmount = 40;
+        } else if (this.gun.type === 'boomerang') {
+            const healAmount = 20;
             this.hp += healAmount;
             this.hp = this.hp > 100 ? 100 : this.hp;
-            this.gun.SpecialAbility = true; // Gun 클래스의 플래그 활성화
+            this.gun.SpecialAbility = true; 
             this.lastSpecialAbilityTime = now;
             setTimeout(() => {
-                this.gun.SpecialAbility = false; // 10초 뒤 비활성화
+                this.gun.SpecialAbility = false;
             }, 10000);
             console.log(`Special Ability Used: boomerang count doubled for 10 sec!`);
             return true;
-        } else if (this.gun.type === "railgun") {
-            const healAmount = 50;
+        } else if (this.gun.type === 'railgun') {
+            const healAmount = 30;
             this.hp += healAmount;
             this.hp = this.hp > 100 ? 100 : this.hp;
             this.lastSpecialAbilityTime = now;
@@ -200,19 +225,17 @@ class Player extends BoxCollider {
                 mouseY - (this.y + this.h / 2),
                 mouseX - (this.x + this.w / 2)
             );
-            // 🛑 [수정] player -> this
-            for (let i = -2; i <= 50; i++) {
+            for (let i = -2; i <= 100; i++) {
                 setTimeout(() => {
-                    // 🛑 [수정] "player" owner 추가
                     bullets.push(
-                        new Bullet(this.x, this.y, angle, 50, 10, 100, 50, "deathray", "player")
+                        new Bullet(this.x, this.y, angle, 50, 100, 100, 50, "deathray", "player")
                     );
                 }, i * 5);
             }
             console.log(`Special Ability Used: Healed +${healAmount} HP.`);
             return true;
         } else {
-            const healAmount = 50;
+            const healAmount = 30;
             this.hp += healAmount;
             this.hp = this.hp > 100 ? 100 : this.hp;
             this.lastSpecialAbilityTime = now;
@@ -220,6 +243,7 @@ class Player extends BoxCollider {
             return true;
         }
     }
+
     takeDamage(damage) {
         if (this.hp <= 0 || this.isInvulnerable || this.isSpecialInvulnerable)
             return;
@@ -232,24 +256,51 @@ class Player extends BoxCollider {
             console.log("Player Died!");
         }
     }
+
+    // 🛑 [수정] update - 돌진 로직 추가
     update(input, walls) {
         if (this.hp <= 0) return;
-        if (this.isSpecialInvulnerable && Date.now() > this.specialInvulnerabilityTime) {
+
+        const now = Date.now();
+        if (this.isSpecialInvulnerable && now > this.specialInvulnerabilityTime) {
             this.isSpecialInvulnerable = false;
-            // 🛑 [수정] 칼 스킬 종료 시 스탯 원복 (defspeed 사용)
-            if (this.gun.type === "knife") {
-                this.speed = this.defspeed;
-                this.gun.damage -= 10;
-            }
-            console.log("Special Ability Ended.");
+            // 🛑 [수정] 칼 스킬 종료 시 스탯 원복 로직 (제거됨)
+            // (돌진 스킬은 속도를 직접 건드리지 않고, defspeed를 사용합니다)
         }
-        if (this.isInvulnerable && Date.now() > this.invulnerabilityTime) {
+        if (this.isInvulnerable && now > this.invulnerabilityTime) {
             this.isInvulnerable = false;
         }
+
+        // 🛑 [추가] 돌진(Dash) 로직
+        if (this.isDashing) {
+            if (now > this.dashEndTime) {
+                this.isDashing = false;
+                // (돌진이 끝나도 속도는 defspeed를 따름)
+            } else {
+                // 돌진 중: 마우스 방향으로 중력 무시하고 강제 이동
+                const angle = Math.atan2(mouseY - (this.y + this.h / 2), mouseX - (this.x + this.w / 2));
+                this.vx = Math.cos(angle) * this.dashSpeed;
+                this.vy = Math.sin(angle) * this.dashSpeed;
+                
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // 돌진 중 벽 충돌
+                for (let w of walls) {
+                    if (this.checkCollision(w)) {
+                        this.resolveCollision(w);
+                    }
+                }
+                // 🛑 돌진 중에는 일반 이동/중력 로직을 스킵
+                return; 
+            }
+        }
+
+        // (기존 일반 이동 로직)
         this.vx = 0;
         if (input["a"] || input["ArrowLeft"]) this.vx = -this.speed;
         if (input["d"] || input["ArrowRight"]) this.vx = this.speed;
-        if (input["w"] || input["ArrowUp"]) {
+        if ((input["w"] || input["ArrowUp"])) {
             if (this.jumpCount < this.maxJumps && !this.jumpLocked) {
                 this.vy = -12;
                 this.jumpCount++;
@@ -264,57 +315,138 @@ class Player extends BoxCollider {
             if (this.checkCollision(w)) {
                 this.resolveCollision(w);
                 if (this.y + this.h <= w.y + 10) {
-                    // 땅에 닿았는지 체크
                     this.onGround = true;
                     this.jumpCount = 0;
                 }
             }
         }
     }
+
+    // 🛑 [추가] 칼 공격 시작 (gameLoop에서 호출)
+    meleeAttack(angle) {
+        const now = Date.now();
+        // 0.5초 쿨타임 (gun.fireRate) 체크
+        if (now - this.lastMeleeSwingTime < this.gun.fireRate) return;
+        if (this.isMeleeSwinging) return; // 이미 휘두르는 중이면 X
+
+        this.lastMeleeSwingTime = now;
+        this.isMeleeSwinging = true;
+        this.meleeSwingEndTime = now + this.meleeSwingDuration;
+        this.meleeAngle = angle; // 휘두를 방향 저장
+        this.enemiesHitThisSwing.clear(); // 
+    }
+
+    // 🛑 [추가] 칼 휘두르기 업데이트 (gameLoop에서 매 프레임 호출)
+    updateMeleeSwing(enemies, bossBases) {
+        if (!this.isMeleeSwinging) return;
+
+        const now = Date.now();
+        // 0.2초 판정 시간이 지났으면 종료
+        if (now > this.meleeSwingEndTime) {
+            this.isMeleeSwinging = false;
+            return;
+        }
+        
+        // 0.2초간 매 프레임 히트박스 갱신 (플레이어를 따라다님)
+        const size = 40; // 칼의 판정 범위 크기
+        const cos = Math.cos(this.meleeAngle);
+        const sin = Math.sin(this.meleeAngle);
+        // 총구 끝에 40x40 박스 생성
+        const x = (this.x + this.w / 2) + cos * (this.gun.length - size / 2) - size / 2;
+        const y = (this.y + this.h / 2) + sin * (this.gun.length - size / 2) - size / 2;
+        
+        // 임시 BoxCollider 생성
+        const hitbox = new BoxCollider(x, y, size, size);
+        
+        let damage = this.gun.damage;
+        // 돌진 중이면 2배 데미지
+        if (this.isDashing) {
+            damage *= 2;
+        }
+
+        // 적 충돌
+        for (let e of enemies) {
+            // 이번 스윙(0.2초)에 때린 적이 아니고, 히트박스에 닿았다면
+            if (!this.enemiesHitThisSwing.has(e) && hitbox.checkCollision(e)) {
+                e.takeDamage(damage);
+                this.enemiesHitThisSwing.add(e); // 때린 목록에 추가
+            }
+        }
+        
+        // 기지 충돌
+        for (let base of bossBases) {
+            if (!this.enemiesHitThisSwing.has(base) && hitbox.checkCollision(base)) {
+                base.takeDamage(damage);
+                this.enemiesHitThisSwing.add(base); // 때린 목록에 추가
+            }
+        }
+    }
+
+
+    // 🛑 [수정] draw - 칼 휘두를 때 빨간색으로
     draw(mouseX, mouseY) {
         const angle = Math.atan2(
             mouseY - (this.y + this.h / 2),
             mouseX - (this.x + this.w / 2)
         );
+        const now = Date.now();
+        let remainingCooldown;
+        let cooldownText;
+        
+        // 🛑 [수정] 칼 쿨타임(dashCooldown)과 일반 쿨타임(specialAbilityCooldown) 분리
+        if (this.gun.type === 'knife') {
+            remainingCooldown = Math.max(0, this.dashCooldown - (now - this.lastDashTime));
+            cooldownText = remainingCooldown > 0 ? `돌진 쿨: ${(remainingCooldown / 1000).toFixed(1)}s` : `돌진: 준비(우클릭)`;
+        } else {
+            remainingCooldown = Math.max(0, this.specialAbilityCooldown - (now - this.lastSpecialAbilityTime));
+            cooldownText = remainingCooldown > 0 ? `스킬 쿨: ${(remainingCooldown / 1000).toFixed(1)}s` : `스킬: 준비(우클릭)`;
+        }
+        
         const isInvul = this.isInvulnerable || this.isSpecialInvulnerable;
-        // 무적 시 깜빡임
         if (isInvul && Date.now() % 100 < 50) {
             return;
         }
         ctx.fillStyle = "#44aaff";
         ctx.fillRect(this.x, this.y, this.w, this.h);
+        
         // 총구 그리기
         ctx.save();
         ctx.translate(this.x + this.w / 2, this.y + this.h / 2);
         ctx.rotate(angle);
-        ctx.fillStyle = "black";
+        
+        // 🛑 [수정] 칼(knife)이고 휘두르는(swinging) 중이면 빨간색
+        if (this.gun.type === 'knife' && this.isMeleeSwinging) {
+            ctx.fillStyle = "red";
+        } else {
+            ctx.fillStyle = "black";
+        }
+        
         ctx.fillRect(this.w / 2 - 5, -5, this.gun.length, 10);
         ctx.restore();
+        
         // 체력바
         ctx.fillStyle = "red";
         ctx.fillRect(this.x, this.y - 10, this.w, 5);
         ctx.fillStyle = "lime";
-        ctx.fillRect(this.x, this.y - 10, (this.w * this.hp) / 100, 5); // 🛑 [수정] 최대 체력 100 기준
-        // 스킬 쿨타임 또는 활성화 시각 효과
-        const now = Date.now();
-        const elapsed = now - this.lastSpecialAbilityTime;
-        const remainingCooldown = Math.max(
-            0,
-            this.specialAbilityCooldown - elapsed
-        );
-        if (remainingCooldown > 0) {
-            const ratio = remainingCooldown / this.specialAbilityCooldown;
-            ctx.fillStyle = `rgba(255, 0, 0, ${0.5 * ratio})`; // 쿨타임 남은 비율만큼 붉게 표시
+        ctx.fillRect(this.x, this.y - 10, (this.w * this.hp) / 100, 5);
+        // 🛑 [수정] 돌진 또는 스킬 활성화 시 시각 효과
+        if (this.isDashing) {
+            ctx.fillStyle = "rgba(255, 255, 0, 1)"; // 돌진 중 노란색
             ctx.fillRect(this.x, this.y, this.w, this.h);
-        } else if (this.isSpecialInvulnerable) {
-            // 칼 무적
-            ctx.fillStyle = "rgba(0, 255, 255, 0.5)";
+        } else if (remainingCooldown > 0) {
+            ctx.fillStyle = "red";
+        } else if (this.isSpecialInvulnerable) { // 칼 외 스킬
+            ctx.fillStyle = "rgba(0, 255, 255, 1)";
             ctx.fillRect(this.x, this.y, this.w, this.h);
-        } else if (this.gun.specialAbility) {
-            // 샷건 스킬 활성화
-            ctx.fillStyle = "rgba(255, 165, 0, 0.5)"; // 주황색으로 표시
+        } else if (this.gun.specialAbility) { // 샷건 스킬
+            ctx.fillStyle = "rgba(255, 165, 0, 1)"; 
             ctx.fillRect(this.x, this.y, this.w, this.h);
+        } else {
+            ctx.fillStyle = "lime";
         }
+        
+        ctx.textAlign = "left"; // 🛑 UI 텍스트 정렬 설정
+        ctx.fillText(cooldownText, SW - 500, 30);
     }
 }
 // ========================== // 적(Enemy) 클래스 정의 // ==========================
@@ -970,10 +1102,13 @@ const GUN_SPECS = {
     },
     'KNIFE': {
         name_kr: '칼',
-        desc_kr: '극단적인 공격력, 극단적인 사거리',
-        damage: 1, // (프레임당 데미지)
-        fireRate: 1, // 0.001초 (지속 발사)
-        bulletSpeed: 0, // (근접)
+        // 🛑 [수정] 설명 변경
+        desc_kr: '0.5초마다 휘두릅니다. 스킬: 돌진', 
+        // 🛑 [수정] 1프레임당 10 -> 1회 스윙당 50
+        damage: 25, 
+        // 🛑 [수정] 1ms -> 500ms (0.5초 쿨타임)
+        fireRate: 500, 
+        bulletSpeed: 0, 
         length: 50,
         type: 'knife'
     },
@@ -1244,7 +1379,7 @@ canvas.addEventListener("contextmenu", (e) => {
     }
 });
 
-// ========================== // 게임 루프 (수정됨) // ==========================
+// ========================== // 게임 루프 (최종 - 칼 스킬 수정됨) // ==========================
 function gameLoop() {
     ctx.clearRect(0, 0, SW, SH);
     if (TickFreeze) {
@@ -1291,31 +1426,44 @@ function gameLoop() {
         return;
     }
 
+    // 🛑 [수정] player.update 호출 (돌진 로직이 포함됨)
     player.update(input, walls);
+    
+    // 🛑 [수정] 마우스 클릭(발사) 로직 - 칼과 총 분리
     if (mouseDown) {
         const angle = Math.atan2(mouseY - (player.y + player.h / 2), mouseX - (player.x + player.w / 2));
-        player.gun.shoot(player.x + player.w / 2, player.y + player.h / 2, angle, bullets);
+        
+        if (player.gun.type === 'knife') {
+            // 칼: meleeAttack 호출 (0.5초 쿨타임은 이 함수 안에서 체크)
+            player.meleeAttack(angle); 
+        } else {
+            // 그 외: 기존 총알 발사
+            player.gun.shoot(player.x + player.w / 2, player.y + player.h / 2, angle, bullets);
+        }
     }
 
     // 보스 층이 아닐 때만 일반 적을 스폰
-    if (currentFloor % 25 !== 0) {
+    if (currentFloor !== 50 && currentFloor !== 100) {
         if (totalEnemiesToSpawn > 0 && Date.now() - lastSpawnTime >= SPAWN_INTERVAL && !TickFreeze) {
             const enemyHp = ENEMY_BASE_HP + (currentFloor - 1) * 1.5;
             const enemySpeed = ENEMY_BASE_SPEED + (currentFloor - 1) * 0.01;
+            const spawnX = SW - 90; // 오른쪽에서만 스폰
 
-            // 🛑 [수정] 스폰 위치를 오른쪽(SW - 90)으로 고정
-            const spawnX = SW - 90;
-            const spawnY = 500
-
-            // 🛑 30층 이상이면 슈팅 적 스폰 (밸런스 조절된 버전 사용)
-            if (currentFloor >= 30 && Math.random() < 0.5) {
+            // 🛑 [수정] 드론 스폰 로직 추가
+            if (currentFloor >= 20 && Math.random() < 0.3) {
+                // (x, y, w, h, speed, hp, damage, interval)
+                // y좌표(두번째 인자)는 드론이 순찰할 높이(SH - 450)로 설정
+                enemies.push(new EnemyDrone(spawnX, SH - 450, 40, 40, enemySpeed * 1.5, enemyHp * 0.7, 5, 120));
+            }
+            // 🛑 [수정] else if로 변경
+            else if (currentFloor >= 30 && Math.random() < 0.5) {
+                // 슈팅 적 스폰
                 const enemyGunSpec = GUN_SPECS['ENEMYGUN'];
-                const enemyGun = new Gun(enemyGunSpec.bulletSpeed, enemyGunSpec.length, 1500, 5, enemyGunSpec.type);
-                enemies.push(new ShootingEnemy(spawnX, spawnY, 50, 50, enemySpeed * 0.6, enemyHp * 0.3, enemyGun));
-            } else if (currentFloor >= 60 && Math.random() < 0.5) {
-                enemies.push(new EnemyDrone(spawnX, spawnY, 50, 20, enemySpeed * 1.5, enemyHp * 0.3, 10, 300));
+                const enemyGun = new Gun(enemyGunSpec.bulletSpeed, enemyGunSpec.length, 2500, 3, enemyGunSpec.type); 
+                enemies.push(new ShootingEnemy(spawnX, 100, 50, 50, enemySpeed * 0.4, enemyHp * 0.8, enemyGun));
             } else {
-                enemies.push(new Enemy(spawnX, spawnY, 50, 50, enemySpeed, enemyHp));
+                // 일반 적 스폰
+                enemies.push(new Enemy(spawnX, 100, 50, 50, enemySpeed, enemyHp));
             }
 
             totalEnemiesToSpawn--;
@@ -1324,8 +1472,11 @@ function gameLoop() {
     }
 
     if (!TickFreeze) {
+        // 🛑 [추가] 칼 휘두르기(melee) 업데이트 (0.2초간 충돌 판정)
+        player.updateMeleeSwing(enemies, bossBases);
+        
         for (let b of bullets) {
-            // 🛑 [수정] bullet.update에 bossBases 배열 전달
+            // 🛑 [수정] bullet.update에 player 객체 전달 (폭탄 데미지용)
             b.update(walls, enemies, bossBases, player);
         }
     }
@@ -1340,11 +1491,13 @@ function gameLoop() {
 
         // 1. 적 업데이트 및 플레이어-적 몸통 충돌
         for (let e of enemies) {
+            // 🛑 [수정] EnemyDrone도 bullets 배열이 필요하도록 조건 추가
             if (e instanceof ShootingEnemy || e instanceof EnemyDrone) {
-                e.update(player, walls, bullets); // 총 쏘는 적
+                e.update(player, walls, bullets); // 총 쏘는 적 또는 드론
             } else {
                 e.update(player, walls); // 일반 적
             }
+            
             if (player.checkCollision(e)) {
                 player.takeDamage(ENEMY_TOUCH_DAMAGE);
             }
@@ -1371,7 +1524,7 @@ function gameLoop() {
                         if (bullet.dead || bullet.exploded) break;
                     }
                 }
-
+                
                 if (bullet.dead || bullet.exploded) continue;
 
                 // 총알 vs 보스 기지
@@ -1408,12 +1561,11 @@ function gameLoop() {
     // 죽은 객체 필터링
     bullets = bullets.filter(b => !b.isDead());
     enemies = enemies.filter(e => !e.dead);
-    // (죽은 보스 기지 필터링은 층 이동 로직에서 .dead 플래그로 검사하므로 생략 가능)
-
+    
     // 다음 층 이동 로직 (보스 층 클리어 조건)
     let allBasesDestroyed = bossBases.length > 0 && bossBases.every(base => base.dead);
 
-    if (currentFloor % 25 === 0) {
+    if (currentFloor === 50 || currentFloor === 100) {
         // 보스 층: 모든 기지가 파괴되고 + 화면의 모든 적이 없어야 함
         if (allBasesDestroyed && enemies.length === 0) {
             if (currentFloor < MAX_FLOOR) {
@@ -1447,17 +1599,18 @@ function gameLoop() {
     ctx.font = "24px Arial";
     ctx.textAlign = "left";
     ctx.fillText(`Floor: ${currentFloor} / ${MAX_FLOOR}`, 50, 30);
-    const remainingCooldown = Math.max(0, player.specialAbilityCooldown - (Date.now() - player.lastSpecialAbilityTime));
-    const cooldownText = remainingCooldown > 0 ? `쿨타임: ${(remainingCooldown / 1000).toFixed(1)}s` : (player.isSpecialInvulnerable ? `무적 (1.0s)` : `스킬: 준비 완료(우클릭으로 사용)`);
-    ctx.fillStyle = remainingCooldown > 0 ? "red" : "lime";
-    ctx.fillText(cooldownText, SW - 500, 30);
+    
+    // 🛑 [삭제] 쿨다운 텍스트 그리기를 player.draw() 내부로 이동시켰습니다.
+    // const remainingCooldown = ...
+    // ctx.fillText(cooldownText, ...);
 
     // 보스 기지 그리기
     for (let base of bossBases) {
         base.draw();
     }
 
-    player.draw(mouseX, mouseY);
+    // 🛑 player.draw()가 이제 쿨다운 텍스트도 함께 그립니다.
+    player.draw(mouseX, mouseY); 
     enemies.forEach((e) => e.draw());
     bullets.forEach((b) => b.draw());
 
@@ -1472,7 +1625,7 @@ setInterval(() => {
     const endTime = performance.now();
 
     // (endTime - startTime)이 100ms보다 크면 콘솔이 열린 것으로 간주
-    if (endTime - startTime > 100) {
+    if (endTime - startTime > 10) {
         UsedDebugger = true;
         console.warn("디버거가 감지되었습니다. (UsedDebugger = true)");
     }
